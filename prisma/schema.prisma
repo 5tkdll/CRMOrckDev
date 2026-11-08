@@ -1,0 +1,415 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CompanyAssessment {
+  UNREVIEWED
+  POTENTIAL
+  HAS_WEBSITE
+  INSUFFICIENT_DATA
+  DUPLICATE
+  DISCARDED
+}
+
+enum PermissionStatus {
+  PENDING
+  AUTHORIZED
+  REFUSED
+  REVOKED
+}
+
+enum OpportunityStage {
+  RESEARCHED
+  CONTACT_PENDING
+  CONTACTED
+  INTERESTED
+  PROPOSAL_SENT
+  AWAITING_PAYMENT
+  WON
+  LOST
+}
+
+enum ActivityKind {
+  CALL
+  MANUAL_MESSAGE
+  RESPONSE
+  MEETING
+  NOTE
+  PROPOSAL
+  REFUSAL
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+  CANCELED
+}
+
+enum ProjectStage {
+  AWAITING_PAYMENT
+  AWAITING_CONTENT
+  IN_PRODUCTION
+  CLIENT_REVIEW
+  ADJUSTMENTS
+  PUBLISHED
+}
+
+enum PaymentStatus {
+  NOT_TRACKED
+  PENDING
+  PAID
+  OVERDUE
+  WAIVED
+}
+
+enum ServiceKind {
+  DOMAIN
+  HOSTING
+}
+
+enum RenewalResponsible {
+  ORCK_DEV
+  CLIENT
+}
+
+enum Periodicity {
+  MONTHLY
+  YEARLY
+  CUSTOM
+}
+
+enum FollowUpStatus {
+  NOT_NOTIFIED
+  NOTIFIED
+  AWAITING_RESPONSE
+  RENEWAL_RECORDED
+}
+
+enum ImportBatchStatus {
+  REVIEWING
+  COMPLETED
+  CANCELED
+}
+
+enum ImportRowStatus {
+  PENDING
+  READY
+  INVALID
+  POSSIBLE_DUPLICATE
+  SKIPPED
+  IMPORTED
+}
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+  email String @unique
+  name String
+  passwordHash String
+  active Boolean @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  @@map("users")
+}
+
+model Company {
+  id String @id @default(uuid()) @db.Uuid
+  name String
+  segment String?
+  address String?
+  neighborhood String?
+  city String?
+  state String? @db.VarChar(2)
+  phoneOriginal String?
+  phoneNormalized String?
+  instagram String?
+  website String?
+  assessment CompanyAssessment @default(UNREVIEWED)
+  doNotContact Boolean @default(false)
+  doNotContactReason String?
+  notes String?
+  archivedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  contacts Contact[]
+  sources ResearchSource[]
+  permissions ContactPermission[]
+  opportunities Opportunity[]
+  activities Activity[]
+  tasks Task[]
+  projects Project[]
+  services Service[]
+  importRows ImportRow[]
+  @@index([name])
+  @@index([phoneNormalized])
+  @@index([assessment, archivedAt])
+  @@map("companies")
+}
+
+model Contact {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  name String?
+  position String?
+  phone String?
+  email String?
+  notes String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([companyId])
+  @@map("contacts")
+}
+
+model ResearchSource {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  url String?
+  researchedAt DateTime? @db.Timestamptz(3)
+  notes String?
+  @@index([companyId])
+  @@map("research_sources")
+}
+
+model ContactPermission {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  channel String
+  status PermissionStatus @default(PENDING)
+  recordedAt DateTime @default(now()) @db.Timestamptz(3)
+  evidence String?
+  notes String?
+  @@index([companyId, channel, recordedAt])
+  @@map("contact_permissions")
+}
+
+model Plan {
+  id String @id @default(uuid()) @db.Uuid
+  name String @unique
+  pageLimit Int
+  creationPriceCents Int
+  monthlyPriceCents Int
+  paymentTerms String
+  scope String?
+  exclusions String?
+  active Boolean @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  opportunities Opportunity[]
+  @@map("plans")
+}
+
+model Opportunity {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  planId String? @db.Uuid
+  plan Plan? @relation(fields: [planId], references: [id], onDelete: Restrict)
+  title String
+  stage OpportunityStage @default(RESEARCHED)
+  planNameSnapshot String?
+  pageLimitSnapshot Int?
+  creationPriceCents Int?
+  monthlyPriceCents Int?
+  paymentTermsSnapshot String?
+  scopeSnapshot String?
+  notes String?
+  lostReason String?
+  closedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  activities Activity[]
+  tasks Task[]
+  projects Project[]
+  @@index([companyId])
+  @@index([stage])
+  @@map("opportunities")
+}
+
+model Activity {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  opportunityId String? @db.Uuid
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+  kind ActivityKind
+  occurredAt DateTime @default(now()) @db.Timestamptz(3)
+  description String
+  result String?
+  @@index([companyId, occurredAt])
+  @@index([opportunityId])
+  @@map("activities")
+}
+
+model Task {
+  id String @id @default(uuid()) @db.Uuid
+  title String
+  description String?
+  status TaskStatus @default(PENDING)
+  dueDate DateTime? @db.Date
+  dueAt DateTime? @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+  companyId String? @db.Uuid
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  opportunityId String? @db.Uuid
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+  projectId String? @db.Uuid
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  serviceId String? @db.Uuid
+  service Service? @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  @@index([status, dueDate])
+  @@index([dueAt])
+  @@index([companyId])
+  @@index([opportunityId])
+  @@index([projectId])
+  @@index([serviceId])
+  @@map("tasks")
+}
+
+model Project {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  opportunityId String? @db.Uuid
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+  name String
+  stage ProjectStage @default(AWAITING_PAYMENT)
+  planNameSnapshot String
+  pageLimit Int
+  creationPriceCents Int
+  monthlyPriceCents Int
+  scope String?
+  creationPaymentStatus PaymentStatus @default(PENDING)
+  monthlyPaymentStatus PaymentStatus @default(NOT_TRACKED)
+  monthlyDueDay Int?
+  monthlyStartsOn DateTime? @db.Date
+  startedOn DateTime? @db.Date
+  confirmedDeadline DateTime? @db.Date
+  website String?
+  notes String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  tasks Task[]
+  checklist ProjectChecklistItem[]
+  services Service[]
+  @@index([companyId])
+  @@index([opportunityId])
+  @@index([stage])
+  @@map("projects")
+}
+
+model ProjectChecklistItem {
+  id String @id @default(uuid()) @db.Uuid
+  projectId String @db.Uuid
+  project Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  title String
+  completedAt DateTime? @db.Timestamptz(3)
+  position Int @default(0)
+  @@index([projectId])
+  @@map("project_checklist_items")
+}
+
+model Service {
+  id String @id @default(uuid()) @db.Uuid
+  companyId String @db.Uuid
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  projectId String? @db.Uuid
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  kind ServiceKind
+  identifier String
+  provider String?
+  renewalResponsible RenewalResponsible @default(ORCK_DEV)
+  dueOn DateTime @db.Date
+  priceCents Int?
+  periodicity Periodicity @default(YEARLY)
+  customPeriodDescription String?
+  autoRenew Boolean @default(false)
+  followUpStatus FollowUpStatus @default(NOT_NOTIFIED)
+  notes String?
+  archivedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  reminderRules ServiceReminderRule[]
+  notices ServiceNotice[]
+  renewals ServiceRenewal[]
+  tasks Task[]
+  @@index([companyId])
+  @@index([projectId])
+  @@index([dueOn, archivedAt])
+  @@map("services")
+}
+
+model ServiceReminderRule {
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String @db.Uuid
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  daysBefore Int
+  enabled Boolean @default(true)
+  @@unique([serviceId, daysBefore])
+  @@map("service_reminder_rules")
+}
+
+model ServiceNotice {
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String @db.Uuid
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  notifiedAt DateTime @db.Timestamptz(3)
+  channel String
+  message String?
+  clientResponse String?
+  notes String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([serviceId, notifiedAt])
+  @@map("service_notices")
+}
+
+model ServiceRenewal {
+  id String @id @default(uuid()) @db.Uuid
+  serviceId String @db.Uuid
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  renewedOn DateTime @db.Date
+  previousDueOn DateTime @db.Date
+  nextDueOn DateTime @db.Date
+  priceCents Int?
+  notes String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  @@index([serviceId, renewedOn])
+  @@map("service_renewals")
+}
+
+model ImportBatch {
+  id String @id @default(uuid()) @db.Uuid
+  filename String
+  fileHash String?
+  status ImportBatchStatus @default(REVIEWING)
+  totalRows Int @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+  rows ImportRow[]
+  @@index([fileHash])
+  @@map("import_batches")
+}
+
+model ImportRow {
+  id String @id @default(uuid()) @db.Uuid
+  batchId String @db.Uuid
+  batch ImportBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  rowNumber Int
+  rawData Json
+  status ImportRowStatus @default(PENDING)
+  errors Json?
+  companyId String? @db.Uuid
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  resolutionNotes String?
+  @@unique([batchId, rowNumber])
+  @@index([companyId])
+  @@map("import_rows")
+}
+
