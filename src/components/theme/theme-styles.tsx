@@ -1,0 +1,29 @@
+import registration from "@/app/(crm)/empresas/registration.module.css";
+import listing from "@/app/(crm)/empresas/listing.module.css";
+import dashboard from "@/app/(crm)/dashboard/dashboard.module.css";
+import companies from "@/app/(crm)/empresas/companies.module.css";
+import address from "@/app/(crm)/empresas/address.module.css";
+const maps:Record<string,string>[]=[registration,listing,dashboard,companies,address];
+const prefix='html[data-crm-theme="dark"] ';
+function selectors(keys:string){return [...new Set(maps.flatMap(map=>keys.split(" ").map(key=>map[key]).filter((v):v is string=>typeof v==="string").flatMap(v=>v.split(/\s+/)).filter(v=>/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(v))))].map(v=>prefix+"."+v);}
+function rule(keys:string,css:string,desc=""){const list=selectors(keys);return list.length?list.map(v=>v+desc).join(",")+"{"+css+"}":"";}
+export function ThemeStyles(){const css=[
+ rule("page dashboard form field sectionHeader pageHeader sideCardHeader previewName metricValue metricMid pipelineStage taskContent companyName panelHeader summary","color:#e5e7eb;"),
+ rule("section sideCard actionBar archiveAction metric filterCard tableCard panel documentSwitch secondary secondaryButton archiveButton noNumber button openButton iconButton tableAction","background:#162034;border-color:#334155;color:#e5e7eb;box-shadow:none;"),
+ rule("documentBox guidanceCard documentExplanation search restrictionToggle duplicateItem contactStatus phone stateTag siteMissing assessment selected badge metricIcon initials sideIcon recordTag serviceIcon dueBadge pipelineIntro","background:#1e293b;border-color:#334155;color:#cbd5e1;"),
+ rule("documentSwitch","background:#0f172a;"),
+ rule("table","border-color:#334155;"),rule("table","background:#111c2e;color:#94a3b8;border-color:#334155;"," th"),rule("table","border-color:#29364c;"," td"),rule("table","color:#e5e7eb;"," td>a"),rule("table","background:#1c2b43;"," tbody tr:hover"),
+ rule("field","background:#0f172a;border-color:#475569;color:#e5e7eb;"," input"),rule("field","background:#0f172a;border-color:#475569;color:#e5e7eb;"," select"),rule("field","background:#0f172a;border-color:#475569;color:#e5e7eb;"," textarea"),
+ rule("field","background:#19263b;color:#aebdd0;"," input:read-only"),rule("formFields","background:#19263b;color:#aebdd0;-webkit-text-fill-color:#aebdd0;"," ."+registration.field+" input:disabled"),
+ rule("filters","background:#0f172a;border-color:#475569;color:#e5e7eb;"," select"),rule("search","color:#e5e7eb;"," input"),
+ rule("headerMeta headerAction backLink stateTag requiredNote documentExplanation hint checkboxRow cepStatus characterCount saveNote summary contactStatus cancelButton archiveAction muted metricLabel metricDetail location shortId date contactBadge segment footnote time secondaryText panelSubtitle panelFooter panelHeader pipelineIntro empty pipelineValue metricTop bottomNote","color:#aebdd0;"),
+ rule("sectionHeader pageHeader panelHeader filters summary task service panelFooter timeline pagination actionBar","border-color:#334155;"),rule("summary","color:#94a3b8;border-color:#334155;"," dt"),rule("summary","color:#cbd5e1;border-color:#334155;"," dd"),rule("summary","border-color:#334155;",">div"),
+ rule("pageHeader sectionHeader sideCardHeader archiveAction","color:#e5e7eb;"," h2"),rule("pageHeader","color:#e5e7eb;"," h1"),rule("pageHeader sectionHeader sideCardHeader archiveAction","color:#aebdd0;"," p"),rule("taskContent companyName service","color:#e5e7eb;"," a"),rule("table","color:#aebdd0;"," td>small"),
+ rule("panelFooter","background:#111c2e;"),rule("metricMid","background:#243047;color:#b8c5d8;",">span"),rule("metric","color:#e5e7eb;"),rule("metric","color:#94a3b8;",">p"),rule("pipelineStage","color:#aebdd0;",">span"),rule("pipelineStage","color:#94a3b8;"," small"),
+ rule("recordTag sectionNumber sideIcon guidanceCard potential selected metricIcon initials serviceIcon openButton tableAction digitalLink pipelineValue","color:#a5b4fc;"),rule("guidanceCard","color:#c4b5fd;"," h2"),rule("badge potential selected recordTag","background:#25254c;border-color:#4c4682;color:#c4b5fd;"),
+ rule("errorBanner duplicateBlocker duplicateWarning alertPanel dangerMetric","border-color:#85414c;"),rule("errorBanner contactBlocked blocked blockedTag dangerIcon conflictTag overdue dangerMetric","background:#381e2c;color:#fda4af;border-color:#85414c;"),rule("errorBanner","color:#fecdd3;"," p"),rule("duplicateBlocker","background:#162034;"),rule("duplicateBlocker","background:#351e2b;border-color:#85414c;"," ."+registration.duplicateItem),
+ rule("duplicateWarning noticeBanner","background:#302819;border-color:#786034;color:#fde68a;"),rule("duplicateWarning","background:#162034;"),rule("successBanner","background:#15362c;border-color:#2f6f54;color:#86efac;"),rule("archiveBanner","background:#1e293b;border-color:#475569;color:#cbd5e1;"),
+ rule("danger red fieldError asterisk","color:#fca5a5;"),rule("dangerMetric","color:#fca5a5;"," strong"),rule("dangerMetric","color:#fca5a5;"," ."+dashboard.metricTop),rule("restrictionActive","background:#381e2c;border-color:#85414c;color:#fda4af;"),rule("restrictionActive","color:#fda4af;"," strong"),rule("validIcon","color:#86efac;"),
+ rule("field","background:#301e29;border-color:#fb7185;"," input[aria-invalid=true]"),rule("field","background:#301e29;border-color:#fb7185;"," textarea[aria-invalid=true]"),rule("field","background:#301e29;border-color:#fb7185;"," select[aria-invalid=true]"),
+ rule("primary primaryButton saveButton","background:#4f46e5;border-color:#6366f1;color:#ffffff;"),rule("primary primaryButton saveButton","background:#4338ca;color:#ffffff;",":hover"),rule("documentSwitch","color:#cbd5e1;"," button"),rule("documentSwitch","background:#4f46e5;color:#ffffff;"," button[aria-pressed=true]"),
+ ].join("\n");return <style id="crm-component-dark-colors" dangerouslySetInnerHTML={{__html:css}}/>;}

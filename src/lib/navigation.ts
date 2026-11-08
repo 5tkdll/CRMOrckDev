@@ -1,7 +1,11 @@
 export const navigation = [
   {
     "href": "/dashboard",
-    "label": "Visão geral"
+    "label": "Visão Geral"
+  },
+  {
+    "href": "/leads",
+    "label": "Leads"
   },
   {
     "href": "/empresas",
@@ -21,7 +25,7 @@ export const navigation = [
   },
   {
     "href": "/servicos",
-    "label": "Domínios e hospedagem"
+    "label": "Domínios & Hospedagem"
   },
   {
     "href": "/importacoes",
@@ -29,7 +33,7 @@ export const navigation = [
   },
   {
     "href": "/planos",
-    "label": "Planos comerciais"
+    "label": "Planos Comerciais"
   },
   {
     "href": "/configuracoes",

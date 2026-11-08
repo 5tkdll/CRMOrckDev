@@ -1,2 +1,2 @@
-import { ModulePlaceholder } from "@/components/ui/module-placeholder";
-export default function Page() { return <ModulePlaceholder title="Importações CSV" description="Pesquisa importada com revisão antes da gravação." items={["Colunas mínimas: nome_local, telefone, instagram, site", "Upload, separador, mapeamento e prévia", "Validação e revisão de possíveis duplicidades", "Não sobrescrever histórico, tarefas ou permissões silenciosamente", "Resumo e histórico dos lotes", "Importar não significa autorização de contato"]} />; }
+import {ImportsVisual} from "@/components/visual-crm/imports";
+export default function Page(){return <ImportsVisual/>;}

@@ -1,2 +1,2 @@
-import { ModulePlaceholder } from "@/components/ui/module-placeholder";
-export default function Page() { return <ModulePlaceholder title="Domínios e hospedagem" description="Vencimentos, avisos manuais e renovações." items={["Serviços separados por cliente e projeto", "Fornecedor, responsável, valor e periodicidade", "Lembretes internos: 30, 15, 7 dias e no vencimento", "Preparar texto para copiar e registrar aviso manual", "Registrar renovação, próximo vencimento e histórico", "Não confundir renovação automática com pagamento confirmado"]} />; }
+import {ServicesVisual} from "@/components/visual-crm/services";
+export default function Page(){return <ServicesVisual/>;}

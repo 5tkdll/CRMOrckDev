@@ -1,15 +1,4 @@
-import { requireUser } from "@/server/auth/session";
-import { getDb } from "@/server/db/client";
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-export default async function AccountPage() {
-  const user = await requireUser();
-  const companies = await getDb().company.count();
-  return <section style={{ padding: 24 }}>
-    <h1>Minha conta</h1>
-    <p>Nome: {user.name}</p><p>E-mail: {user.email}</p>
-    <p>Sessao autenticada. Consulta pelo Prisma concluida.</p>
-    <p>Empresas cadastradas no banco: {companies}</p>
-    <p>Esta contagem e real; os demais modulos ainda serao conectados aos dados.</p>
-  </section>;
-}
+import {requireUser} from "@/server/auth/session";
+import {Head,Field,Button,styles as s} from "@/components/visual-crm/primitives";
+export const dynamic="force-dynamic";
+export default async function AccountPage(){const user=await requireUser(),initials=user.name.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase();return <section className={s.page}><Head title="Minha Conta" section="Perfil do Usuário" subtitle="Identificação do usuário conectado e apresentação das preferências de perfil."/><div className={s.grid}><section className={s.card}><div className={s.actions}><div className={s.avatar}>{initials||"U"}</div><div><h2>{user.name}</h2><p className={s.note}>{user.email}</p></div></div><div className={s.divider}/><div className={s.rule}><span>Nome</span><strong>{user.name}</strong></div><div className={s.rule}><span>E-mail</span><span>{user.email}</span></div><div className={s.rule}><span>Sessão</span><span>Autenticada</span></div><div className={s.divider}/><Button icon="edit">Editar Perfil</Button></section><aside className={s.card}><h2>Segurança e Acesso</h2><div className={s.stack}><Field label="Senha atual" type="password"/><Field label="Nova senha" type="password"/><Field label="Confirmar nova senha" type="password"/><Button primary>Alterar Senha</Button></div></aside></div></section>;}
