@@ -1,25 +1,23 @@
 import Link from "next/link";
-import { getCompany } from "@/server/companies/queries";
-import { CompanyForm } from "../company-form";
-import { ArchiveForm } from "../archive-form";
-import type { CompanyValues } from "@/lib/companies/types";
-import { assessments } from "@/lib/companies/types";
-import { formatCpf,formatCnpj,formatCep,formatPhone,digits } from "@/lib/companies/identity.mjs";
-import styles from "../companies.module.css";
+import {getCompany} from "@/server/companies/queries";
+import {CompanyForm} from "../company-form";
+import {ArchiveForm} from "../archive-form";
+import type {CompanyValues} from "@/lib/companies/types";
+import {formatCpf,formatCnpj,formatCep,formatPhone,digits} from "@/lib/companies/identity.mjs";
+import {CrmIcon} from "@/components/ui/crm-icon";
+import styles from "../registration.module.css";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-export default async function CompanyPage({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<Record<string,string|string[]|undefined>>}) {
-  const {id}=await params, c=await getCompany(id), flash=await searchParams;
-  const type=c.documentType??"CNPJ";
-  const initial:CompanyValues={name:c.name,segment:c.segment??"",address:c.address??"",neighborhood:c.neighborhood??"",city:c.city??"",state:c.state??"",phoneOriginal:c.phoneOriginal ? ([10,11].includes(digits(c.phoneOriginal).length)?formatPhone(c.phoneOriginal):c.phoneOriginal) : "",instagram:c.instagram??"",website:c.website??"",assessment:c.assessment,doNotContact:c.doNotContact?"on":"",doNotContactReason:c.doNotContactReason??"",notes:c.notes??"",documentType:type,documentNumber:type==="CPF"?formatCpf(c.documentNumber??""):formatCnpj(c.documentNumber??""),responsibleName:c.responsibleName??"",responsibleCpf:formatCpf(c.responsibleCpf??""),postalCode:formatCep(c.postalCode??""),addressNumber:c.addressNumber??"",addressComplement:c.addressComplement??"",useClientCpf:""};
-  const version=c.updatedAt.toISOString();
-  const labels:Record<string,string>={name:"Nome",segment:"Segmento",address:"Endereço",neighborhood:"Bairro",city:"Cidade",state:"UF",phoneOriginal:"Telefone",instagram:"Instagram",website:"Site",doNotContactReason:"Motivo da restrição",notes:"Observações",documentType:"Tipo de documento",documentNumber:"Documento do cliente",responsibleName:"Responsável",responsibleCpf:"CPF do responsável",postalCode:"CEP",addressNumber:"Número",addressComplement:"Complemento"};
-  return <section><Link href="/empresas">Voltar às empresas</Link><div className="page-heading"><p className="eyebrow">EMPRESAS</p><h1>{c.name}</h1><p className="muted">Atualizado em {new Intl.DateTimeFormat("pt-BR",{dateStyle:"short",timeStyle:"short",timeZone:"America/Sao_Paulo"}).format(c.updatedAt)}</p></div>
-    {flash.saved==="1"&&<p role="status" className={styles.success}>Cadastro salvo.</p>}{flash.archived==="1"&&<p role="status" className={styles.success}>Cadastro arquivado.</p>}{flash.restored==="1"&&<p role="status" className={styles.success}>Cadastro restaurado.</p>}
-    {(!c.documentNumber||!c.responsibleCpf||!c.responsibleName)&&<div className={styles.warning}>Cadastro anterior à atualização. Complete documento e responsável ao salvar uma edição. Nenhum dado fictício foi preenchido.</div>}
-    {c.doNotContact&&<div className={styles.warning}><h2>Não contatar</h2><p>{c.doNotContactReason??"Restrição registrada."}</p></div>}
-    {c.archivedAt?<div className={styles.card}><h2>Cadastro arquivado</h2><p>Restaure para editar.</p><dl>{Object.entries(initial).filter(([k])=>!["assessment","doNotContact","useClientCpf"].includes(k)).map(([k,v])=><div key={k}><dt>{labels[k]??k}</dt><dd className={styles.preserve}>{v||(k==="website"?"Site não identificado":"Não informado")}</dd></div>)}</dl><p>Avaliação: {assessments[c.assessment]}</p></div>:<CompanyForm key={`${id}:${version}`} id={id} updatedAt={version} initial={initial}/>}
-    <ArchiveForm key={`archive:${version}`} id={id} updatedAt={version} archived={!!c.archivedAt}/>
-    <p className="muted">Documentos são dados pessoais: não compartilhe capturas ou exportações reais sem necessidade. Contatos adicionais e histórico seguem separados.</p>
+export default async function CompanyPage({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<Record<string,string|string[]|undefined>>}){
+  const {id}=await params,c=await getCompany(id),flash=await searchParams;
+  const type=c.documentType??"CNPJ",version=c.updatedAt.toISOString();
+  const initial:CompanyValues={name:c.name,segment:c.segment??"",address:c.address??"",neighborhood:c.neighborhood??"",city:c.city??"",state:c.state??"",phoneOriginal:c.phoneOriginal?([10,11].includes(digits(c.phoneOriginal).length)?formatPhone(c.phoneOriginal):c.phoneOriginal):"",instagram:c.instagram??"",website:c.website??"",assessment:c.assessment,doNotContact:c.doNotContact?"on":"",doNotContactReason:c.doNotContactReason??"",notes:c.notes??"",documentType:type,documentNumber:type==="CPF"?formatCpf(c.documentNumber??""):formatCnpj(c.documentNumber??""),responsibleName:c.responsibleName??"",responsibleCpf:formatCpf(c.responsibleCpf??""),postalCode:formatCep(c.postalCode??""),addressNumber:c.addressNumber??"",addressComplement:c.addressComplement??"",useClientCpf:""};
+  const saved=flash.saved==="1",archived=flash.archived==="1",restored=flash.restored==="1";
+  return <section className={styles.page}>
+    <header className={styles.pageHeader}><div className={styles.headerText}><div className={styles.headerMeta}><Link href="/empresas" className={styles.backLink}><CrmIcon name="chevron_right" size={13} className={styles.backChevron}/>Voltar às empresas</Link><span className={styles.recordTag}>ID #{c.id.slice(0,8).toUpperCase()}</span><span className={styles.stateTag}>{c.archivedAt?"Arquivado":"Ativo"}</span></div><h1>{c.name}</h1><p>Atualizado em {new Intl.DateTimeFormat("pt-BR",{dateStyle:"short",timeStyle:"short",timeZone:"America/Sao_Paulo"}).format(c.updatedAt)}</p></div><div className={styles.headerAction}><CrmIcon name={c.archivedAt?"database":"edit"} size={15}/><span>{c.archivedAt?"Somente leitura":"Editar cadastro"}</span></div></header>
+    {(saved||archived||restored)&&<p role="status" className={styles.successBanner}><CrmIcon name="task_alt" size={18}/>{saved?"Cadastro salvo.":archived?"Cadastro arquivado.":"Cadastro restaurado."}</p>}
+    {(!c.documentNumber||!c.responsibleCpf||!c.responsibleName)&&<div className={styles.noticeBanner}><CrmIcon name="help" size={18}/><span>Identificação pendente. Complete documento e responsável ao salvar uma edição.</span></div>}
+    {c.doNotContact&&<div className={styles.errorBanner}><CrmIcon name="block" size={20}/><div><strong>Não contatar</strong><p>{c.doNotContactReason??"Restrição registrada."}</p></div></div>}
+    <CompanyForm key={`${id}:${version}`} id={id} updatedAt={version} initial={initial} archived={!!c.archivedAt} archiveControl={<ArchiveForm key={`archive:${version}`} id={id} updatedAt={version} archived={!!c.archivedAt}/>}/>
   </section>;
 }
