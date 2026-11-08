@@ -1,0 +1,2 @@
+import { ModulePlaceholder } from "@/components/ui/module-placeholder";
+export default function Page() { return <ModulePlaceholder title="Empresas" description="Cadastro e avaliação de potenciais clientes." items={["Cadastro, edição e arquivamento", "Contatos, fontes da pesquisa e presença digital", "Busca e filtros; site não identificado", "Revisão de duplicidades", "Preferências de contato separadas da avaliação comercial"]} />; }

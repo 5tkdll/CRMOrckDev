@@ -1,0 +1,2 @@
+import { ModulePlaceholder } from "@/components/ui/module-placeholder";
+export default function Page() { return <ModulePlaceholder title="Configurações" description="Preferências internas e documentação operacional." items={["Dados básicos da ORCK DEV", "Perfil e alteração de senha após autenticação implementada", "Preferências de lembretes", "Textos de avisos manuais", "Orientações de exportação e recuperação"]} />; }

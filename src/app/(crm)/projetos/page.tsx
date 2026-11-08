@@ -1,0 +1,2 @@
+import { ModulePlaceholder } from "@/components/ui/module-placeholder";
+export default function Page() { return <ModulePlaceholder title="Projetos" description="Controle da entrega dos sites vendidos." items={["Etapas de produção", "Escopo contratado e quantidade de páginas", "Conteúdo, aprovações e pendências", "Prazo informado pelo responsável", "Criação e mensalidade acompanhadas separadamente"]} />; }

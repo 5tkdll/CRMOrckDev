@@ -1,0 +1,2 @@
+import { ModulePlaceholder } from "@/components/ui/module-placeholder";
+export default function Page() { return <ModulePlaceholder title="Planos comerciais" description="Catálogo inicial aprovado." items={["Start: até 4 páginas — criação R$ 899,00", "Advanced: até 6 páginas — criação R$ 999,00", "Até 12x sem juros via link; fornecedor pendente", "Hospedagem e manutenção: R$ 79,90/mês, separada da criação", "Escopo detalhado e limites de manutenção ainda pendentes"]} />; }
