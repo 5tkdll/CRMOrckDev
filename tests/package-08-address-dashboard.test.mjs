@@ -1,0 +1,17 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {onlyAddressNumber,isAddressNumber,isNoAddressNumber,cepPatch} from "../src/lib/companies/address-rules.mjs";
+import {dashboardClock,daysUntil} from "../src/lib/dashboard/clock.mjs";
+test("numero elimina letras e simbolos digitados ou colados",()=>{assert.equal(onlyAddressNumber("a12b-34c56"),"12345");assert.equal(onlyAddressNumber("abc"),"");});
+test("numero conserva zeros e limita a cinco digitos",()=>{assert.equal(onlyAddressNumber("00123456789"),"00123");});
+test("servidor aceita vazio, S/N e um a cinco digitos",()=>{for(const n of ["","S/N","0","00123","99999"])assert.equal(isAddressNumber(n),true);});
+test("servidor rejeita texto livre, negativo, decimal e seis digitos",()=>{for(const n of ["abc","123456","12A","-1","1.2","1 2"])assert.equal(isAddressNumber(n),false);});
+test("opcao sem numero reconhece legado",()=>{for(const n of ["S/N","s/n","s.n.","Sem número"])assert.equal(isNoAddressNumber(n),true);assert.equal(isNoAddressNumber("123"),false);});
+const found={cep:"74915515",address:"Avenida",neighborhood:"Bairro",city:"Cidade",state:"GO"};
+test("CEP substitui automaticamente campos, incluindo vazio",()=>{assert.deepEqual(cepPatch({...found,address:""},found.cep,found.cep),{address:"",neighborhood:"Bairro",city:"Cidade",state:"GO"});});
+test("CEP nao inclui numero nem complemento no patch",()=>{const patch=cepPatch({...found,addressNumber:"999",addressComplement:"errado"},found.cep,found.cep);assert.equal("addressNumber" in patch,false);assert.equal("addressComplement" in patch,false);});
+test("resposta de CEP anterior nao altera o CEP novo",()=>{assert.equal(cepPatch(found,found.cep,"74000000"),null);});
+test("resposta malformada nao altera endereco",()=>{assert.equal(cepPatch({...found,state:123},found.cep,found.cep),null);});
+test("relogio usa dia de Brasilia antes da meia-noite local",()=>{const c=dashboardClock(new Date("2026-11-09T02:59:59Z"));assert.equal(c.key,"2026-11-08");assert.equal(c.start.toISOString(),"2026-11-08T03:00:00.000Z");assert.equal(c.end.toISOString(),"2026-11-09T03:00:00.000Z");});
+test("relogio muda data na meia-noite de Brasilia",()=>{assert.equal(dashboardClock(new Date("2026-11-09T03:00:00Z")).key,"2026-11-09");});
+test("vencimentos usam data sem deslocamento de fuso",()=>{const c=dashboardClock(new Date("2026-11-08T12:00:00Z"));assert.equal(daysUntil("2026-11-08T00:00:00Z",c.day),0);assert.equal(daysUntil("2026-11-07T00:00:00Z",c.day),-1);assert.equal(daysUntil(c.horizon,c.day),30);});

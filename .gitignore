@@ -13,3 +13,5 @@ backups/
 imports/
 exports/
 /src/generated/prisma/
+
+.local-backups/

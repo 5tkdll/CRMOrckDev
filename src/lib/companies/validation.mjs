@@ -1,5 +1,7 @@
 import { canonicalDocument, validCpf, validCnpj, digits } from "./identity.mjs";
-const limits = { name:200, segment:120, address:300, neighborhood:120, city:120, state:2, phoneOriginal:40, instagram:300, website:1000, assessment:30, doNotContact:3, doNotContactReason:1000, notes:10000, documentType:4, documentNumber:30, responsibleName:200, responsibleCpf:20, postalCode:10, addressNumber:30, addressComplement:200, useClientCpf:3 };
+import { isAddressNumber, isNoAddressNumber, NO_ADDRESS_NUMBER } from "./address-rules.mjs";
+// address-number-v2
+const limits = { name:200, segment:120, address:300, neighborhood:120, city:120, state:2, phoneOriginal:40, instagram:300, website:1000, assessment:30, doNotContact:3, doNotContactReason:1000, notes:10000, documentType:4, documentNumber:30, responsibleName:200, responsibleCpf:20, postalCode:10, addressNumber:5, addressComplement:200, useClientCpf:3 };
 const states = new Set("AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" "));
 const assessments = new Set(["UNREVIEWED", "POTENTIAL", "HAS_WEBSITE", "INSUFFICIENT_DATA", "DUPLICATE", "DISCARDED"]);
 export function validId(value) { return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value); }
@@ -22,6 +24,8 @@ export function parseCompany(raw) {
     if (values[field].length>limits[field]) errors[field]=`Limite de ${limits[field]} caracteres.`;
     if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(values[field])) errors[field]="Caracteres de controle não permitidos.";
   }
+  if (isNoAddressNumber(values.addressNumber)) values.addressNumber=NO_ADDRESS_NUMBER;
+  if (!isAddressNumber(values.addressNumber)) errors.addressNumber="Informe até 5 dígitos ou use S/ Número.";
   if (!values.name) errors.name="Informe o nome do cliente / empresa.";
   values.state=values.state.toUpperCase();
   if (values.state && !states.has(values.state)) errors.state="UF inválida.";
