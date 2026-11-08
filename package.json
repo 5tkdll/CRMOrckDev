@@ -15,7 +15,8 @@
     "next": "latest",
     "pg": "8.23.1",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
     "@types/node": "latest",
