@@ -1,0 +1,12 @@
+{
+  "mjs_syntax_files": 3,
+  "save_result_unit_tests_passed": 4,
+  "save_result_unit_tests_failed": 0,
+  "form_patch_fixture": "initial apply and idempotent repeat passed",
+  "not_run": [
+    "TypeScript project",
+    "Next build",
+    "PostgreSQL integration",
+    "browser visual comparison"
+  ]
+}

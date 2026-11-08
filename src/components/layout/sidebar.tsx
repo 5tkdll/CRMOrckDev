@@ -1,10 +1,28 @@
 "use client";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { navigation } from "@/lib/navigation";
-
-export function Sidebar() {
-  const pathname = usePathname();
-  return <aside className="sidebar"><Link className="brand" href="/dashboard">ORCK DEV<small>CRM comercial</small></Link><nav aria-label="Menu principal">{navigation.map(item => <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined}>{item.label}</Link>)}</nav><p className="sidebar-note">Pacote inicial · sem dados reais</p></aside>;
+import { CrmIcon,type IconName } from "@/components/ui/crm-icon";
+const entries: {href:string;label:string;icon:IconName}[] = [
+  {href:"/dashboard",label:"Visão Geral",icon:"dashboard"},
+  {href:"/empresas",label:"Empresas",icon:"business"},
+  {href:"/oportunidades",label:"Oportunidades",icon:"point_of_sale"},
+  {href:"/tarefas",label:"Tarefas",icon:"task_alt"},
+  {href:"/projetos",label:"Projetos",icon:"code"},
+  {href:"/servicos",label:"Domínios & Hospedagem",icon:"dns"},
+  {href:"/importacoes",label:"Importações CSV",icon:"upload_file"},
+  {href:"/planos",label:"Planos Comerciais",icon:"sell"},
+  {href:"/configuracoes",label:"Configurações",icon:"settings"},
+];
+export function Sidebar({user}:{user:{name:string;email:string}}) {
+  const pathname=usePathname();
+  const initials=user.name.split(/\s+/).filter(Boolean).slice(0,2).map(v=>v[0]).join("").toUpperCase();
+  return <aside className="crm-sidebar">
+    <Link href="/dashboard" className="crm-brand"><span className="crm-brand-mark"><CrmIcon name="terminal"/></span><span>ORCK DEV<small>Agency CRM &amp; Ops</small></span></Link>
+    <Link href="/empresas/nova" className="crm-quick-create"><CrmIcon name="add" size={16}/>Novo cliente</Link>
+    <nav aria-label="Menu principal" className="crm-nav">{entries.map(item=><Link key={item.href} href={item.href} aria-current={pathname===item.href||pathname.startsWith(item.href+"/")?"page":undefined}><CrmIcon name={item.icon} size={18}/><span>{item.label}</span></Link>)}</nav>
+    <div className="crm-sidebar-footer"><Link href="/conta" className="crm-profile-link"><CrmIcon name="account_circle" size={18}/>Perfil do usuário</Link>
+      <div className="crm-operator"><span className="crm-avatar">{initials||"U"}</span><div><span>{user.name}</span><small>{user.email}</small></div></div>
+      <p className="crm-local-note">Uso interno · acesso local</p>
+    </div>
+  </aside>;
 }

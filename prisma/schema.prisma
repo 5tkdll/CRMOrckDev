@@ -148,6 +148,15 @@ model Company {
   @@index([phoneNormalized])
   @@index([assessment, archivedAt])
   @@map("companies")
+  // company-identification-v1
+  documentType String? @db.VarChar(4)
+  documentNumber String? @db.VarChar(14)
+  responsibleName String? @db.VarChar(200)
+  responsibleCpf String? @db.VarChar(11)
+  postalCode String? @db.VarChar(8)
+  addressNumber String? @db.VarChar(30)
+  addressComplement String? @db.VarChar(200)
+  @@unique([documentType, documentNumber])
 }
 
 model Contact {
