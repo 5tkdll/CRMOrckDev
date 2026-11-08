@@ -12,6 +12,7 @@
     "@next/env": "16.4.5",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "jose": "6.2.16",
     "next": "latest",
     "pg": "8.23.1",
     "react": "latest",
