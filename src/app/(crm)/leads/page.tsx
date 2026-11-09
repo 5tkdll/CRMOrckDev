@@ -1,2 +1,32 @@
-import {ModuleVisual} from "@/components/visual-crm/modules";
-export default function Page(){return <ModuleVisual module="leads"/>;}
+import Link from "next/link";
+import {requireUser} from "@/server/auth/session";
+import {getDb} from "@/server/db/client";
+import {Prisma} from "@/generated/prisma/client";
+import {safeLink} from "@/lib/csv-import/core.mjs";
+import {Head,Badge,styles as s} from "@/components/visual-crm/primitives";
+export const dynamic='force-dynamic';
+type Params=Record<string,string|string[]|undefined>;
+export default async function LeadsPage({searchParams}:{searchParams:Promise<Params>}){
+ await requireUser();const params=await searchParams;
+ const text=(k:string)=>typeof params[k]==='string'?(params[k] as string).slice(0,200):'';
+ const q=text('q'),group=text('group'),batch=text('batch');
+ const requested=Number(text('page')||1);const page=Number.isInteger(requested)&&requested>0?Math.min(requested,100000):1;
+ const where:Prisma.LeadWhereInput={};
+ if(q)where.OR=[{name:{contains:q,mode:'insensitive'}},{segment:{contains:q,mode:'insensitive'}},{location:{contains:q,mode:'insensitive'}},{phoneOriginal:{contains:q}}];
+ if(group==='research')where.needsResearch=true;
+ if(group==='phone')where.phoneNormalized={not:null};
+ if(group==='no-website')where.websiteKind={in:['NOT_IDENTIFIED','SOCIAL']};
+ if(group==='blocked')where.doNotContact=true;
+ if(/^[a-f0-9-]{36}$/i.test(batch))where.entry={batchId:batch};
+ const link=(p:number)=>{const v=new URLSearchParams({q,group,batch,page:String(p)});return '/leads?'+v.toString();};
+ try{
+ const db=getDb();const [total,all,research,batches]=await Promise.all([db.lead.count({where}),db.lead.count(),db.lead.count({where:{needsResearch:true}}),db.csvBatch.findMany({where:{status:'COMPLETED'},orderBy:{createdAt:'desc'},take:100,select:{id:true,filename:true}})]);
+ const pages=Math.max(1,Math.ceil(total/25)),current=Math.min(page,pages);
+ const leads=await db.lead.findMany({where,orderBy:[{createdAt:'desc'},{id:'desc'}],skip:(current-1)*25,take:25,include:{entry:{include:{batch:{select:{filename:true,id:true}}}}}});
+ return <section className={s.page}><Head title="Leads" section="Prospecção · Leads" subtitle="Pré-cadastros de pesquisa. Importar ou cadastrar não significa autorização de contato."><Link className={s.primary} href="/importacoes">Importar CSV</Link><Link className={s.button} href="/leads/novo">Novo lead (visual)</Link></Head>
+ <section className={s.metrics}>{[['Total de leads',all],['Pesquisa complementar',research],['Resultado dos filtros',total]].map(([label,value])=><article key={String(label)} className={s.metric}><div className={s.metricHead}><span>{label}</span></div><strong>{value}</strong><small>Dados persistidos no CRM</small></article>)}</section>
+ <form className={s.filterCard} action="/leads"><div className={s.toolbar}><label className={s.field}>Buscar<input className={s.input} name="q" defaultValue={q} placeholder="Nome, segmento, local ou telefone"/></label><label className={s.field}>Filtro<select className={s.select} name="group" defaultValue={group}><option value="">Todos</option><option value="research">Pesquisa complementar</option><option value="phone">Com telefone válido</option><option value="no-website">Sem site próprio identificado no arquivo</option><option value="blocked">Não contatar</option></select></label><label className={s.field}>Lote<select className={s.select} name="batch" defaultValue={batch}><option value="">Todos os lotes</option>{batches.map(b=><option key={b.id} value={b.id}>{b.filename}</option>)}</select></label><button className={s.primary} type="submit">Filtrar</button><Link className={s.button} href="/leads">Limpar</Link></div></form>
+ <section className={s.tableCard}><div className={s.tableTop}><h2>Leads importados</h2><span>{total} registros encontrados</span></div><div className={s.scroll}><table className={s.table}><thead><tr>{['Nome / detalhes','Telefone','Presença digital','Localização','Segmento','Avaliação / situação'].map(c=><th key={c}>{c}</th>)}</tr></thead><tbody>{leads.map(l=><tr key={l.id}><td><strong>{l.name}</strong><details><summary>Consultar dados e origem</summary><div className={s.compare}><p>Lote: {l.entry.batch.filename}</p><p>Linha de origem: {l.entry.line}</p><p>Local original: {l.location||'—'}</p><p>Observações: {l.notes||'—'}</p><p>Data da pesquisa informada: {l.researchedAt||'Não informada'}</p><p>Fonte: {safeLink(l.sourceUrl)?<a href={safeLink(l.sourceUrl)} target="_blank" rel="noopener noreferrer">Abrir fonte</a>:l.sourceUrl||'Não informada'}</p><p>Restrição: {l.doNotContact?l.doNotContactReason||'Não contatar':'Sem restrição registrada; não comprova autorização'}</p><p>Validação da importação:</p><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{JSON.stringify(l.entry.warnings,null,2)}</pre><details><summary>Linha original preservada</summary><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{JSON.stringify(l.entry.raw,null,2)}</pre></details><Link href={'/leads?batch='+l.entry.batch.id}>Filtrar este lote</Link></div></details></td><td>{l.phoneOriginal||'Não informado'}{l.phoneOriginal&&!l.phoneNormalized&&<small>Requer revisão</small>}</td><td>{l.websiteUrl?<a href={safeLink(l.websiteUrl)} target="_blank" rel="noopener noreferrer">{l.websiteKind==='SOCIAL'?'Rede social / agregador':'Site / link informado'}</a>:<span>{l.website?'Link a revisar':'Site não identificado'}</span>}{l.instagramUrl&&<p><a href={safeLink(l.instagramUrl)} target="_blank" rel="noopener noreferrer">Instagram</a></p>}</td><td>{l.location||'Não informada'}</td><td>{l.segment||'Não informado'}</td><td>{l.googleRating!==null?<span>Google: {l.googleRating.toLocaleString('pt-BR')} / 5</span>:<span>Sem nota</span>}<p><Badge tone={l.doNotContact?'red':l.needsResearch?'amber':''}>{l.doNotContact?'Não contatar':l.needsResearch?'Pesquisar dados':'Não avaliado'}</Badge></p></td></tr>)}{!leads.length&&<tr><td colSpan={6}>Nenhum lead neste filtro. Importe um CSV para iniciar.</td></tr>}</tbody></table></div><footer className={s.foot}><span>Página {current} de {pages} · até 25 registros por página</span><div className={s.actions}>{current>1&&<Link className={s.button} href={link(current-1)}>Anterior</Link>}{current<pages&&<Link className={s.button} href={link(current+1)}>Próxima</Link>}</div></footer></section>
+ </section>;
+ }catch{return <section className={s.page}><Head title="Leads" section="Prospecção" subtitle="Consulta de leads importados"/><div role="alert" className={`${s.banner} ${s.red}`}>Não foi possível consultar os leads. Confira a migration do Pacote 13, as permissões e a conexão com o banco.</div><Link href="/importacoes">Voltar às importações</Link></section>;}
+}

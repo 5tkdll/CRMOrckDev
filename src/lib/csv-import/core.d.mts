@@ -1,0 +1,18 @@
+export type Field="name"|"phone"|"instagram"|"website"|"location"|"segment"|"rating"|"sourceUrl"|"researchedAt"|"notes";
+export type Values=Record<Field,string>;
+export type Normalized=Values & {phoneNormalized:string;websiteUrl:string;websiteDomain:string;websiteKind:string;instagramUrl:string;ratingValue:number|null;needsResearch:boolean};
+export type Candidate={id:string;kind?:string;name:string;phoneNormalized:string|null;websiteDomain:string|null;instagramUrl?:string|null;doNotContact?:boolean;phone?:string|null;website?:string|null;location?:string|null};
+export type InputRow={line:number;values:Values;raw?:Record<string,string>;structuralError?:string};
+export type Conflict={kind:string;id:string;name:string;reasons:string[];doNotContact:boolean;phone:string;website:string;location:string};
+export type CheckedRow={line:number;raw:Record<string,string>;data:Normalized;errors:string[];warnings:string[];conflicts:Conflict[];status:string};
+export const FIELDS:string[];
+export const LABELS:Record<string,string>;
+export function canonical(value:unknown):string;
+export function parseCsv(text:string,separator?:string):{headers:string[];separator:string;records:{line:number;cells:string[];structuralError:string}[]};
+export function autoMap(headers:string[]):Record<string,number>;
+export function validateMapping(mapping:unknown,headers:string[]):Record<string,number>;
+export function safeLink(value:unknown):string;
+export function domain(value:unknown):string;
+export function normalize(value:Values):{data:Normalized;errors:string[];warnings:string[]};
+export function compare(data:Normalized,candidate:Candidate):string[];
+export function analyzeRows(inputs:InputRow[],existing?:Candidate[]):CheckedRow[];
