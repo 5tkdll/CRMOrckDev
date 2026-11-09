@@ -49,6 +49,7 @@ enum ProjectStage {
  IN_PRODUCTION
  CLIENT_REVIEW
  ADJUSTMENTS
+ READY_TO_PUBLISH
  PUBLISHED
 }
 enum PaymentStatus {
@@ -100,9 +101,9 @@ model User {
  createdAt DateTime @default(now()) @db.Timestamptz(3)
  updatedAt DateTime @updatedAt
  csvBatches CsvBatch[]
+ salesEvents SalesFlowEvent[]
  @@map("users")
 }
-
 model Company {
  id String @id @default(uuid()) @db.Uuid
  name String
@@ -131,6 +132,7 @@ model Company {
  projects Project[]
  services Service[]
  importRows ImportRow[]
+ salesFlows SalesFlow[]
  @@index([name])
  @@index([phoneNormalized])
  @@index([assessment, archivedAt])
@@ -144,7 +146,6 @@ model Company {
  addressComplement String? @db.VarChar(200)
  @@unique([documentType, documentNumber])
 }
-
 model Contact {
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
@@ -158,7 +159,6 @@ model Contact {
  @@index([companyId])
  @@map("contacts")
 }
-
 model ResearchSource {
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
@@ -169,7 +169,6 @@ model ResearchSource {
  @@index([companyId])
  @@map("research_sources")
 }
-
 model ContactPermission {
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
@@ -182,7 +181,6 @@ model ContactPermission {
  @@index([companyId, channel, recordedAt])
  @@map("contact_permissions")
 }
-
 model Plan {
  id String @id @default(uuid()) @db.Uuid
  name String @unique
@@ -198,7 +196,6 @@ model Plan {
  opportunities Opportunity[]
  @@map("plans")
 }
-
 model Opportunity {
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
@@ -221,11 +218,11 @@ model Opportunity {
  activities Activity[]
  tasks Task[]
  projects Project[]
+ salesFlow SalesFlow?
  @@index([companyId])
  @@index([stage])
  @@map("opportunities")
 }
-
 model Activity {
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
@@ -240,7 +237,6 @@ model Activity {
  @@index([opportunityId])
  @@map("activities")
 }
-
 model Task {
  id String @id @default(uuid()) @db.Uuid
  title String
@@ -259,6 +255,7 @@ model Task {
  service Service? @relation(fields: [serviceId], references: [id], onDelete: Restrict)
  createdAt DateTime @default(now()) @db.Timestamptz(3)
  updatedAt DateTime @updatedAt
+ salesFlow SalesFlow?
  @@index([status, dueDate])
  @@index([dueAt])
  @@index([companyId])
@@ -267,7 +264,6 @@ model Task {
  @@index([serviceId])
  @@map("tasks")
 }
-
 model Project {
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
@@ -294,12 +290,12 @@ model Project {
  tasks Task[]
  checklist ProjectChecklistItem[]
  services Service[]
+ salesFlow SalesFlow?
  @@index([companyId])
  @@index([opportunityId])
  @@index([stage])
  @@map("projects")
 }
-
 model ProjectChecklistItem {
  id String @id @default(uuid()) @db.Uuid
  projectId String @db.Uuid
@@ -310,7 +306,6 @@ model ProjectChecklistItem {
  @@index([projectId])
  @@map("project_checklist_items")
 }
-
 model Service {
  id String @id @default(uuid()) @db.Uuid
  companyId String @db.Uuid
@@ -340,7 +335,6 @@ model Service {
  @@index([dueOn, archivedAt])
  @@map("services")
 }
-
 model ServiceReminderRule {
  id String @id @default(uuid()) @db.Uuid
  serviceId String @db.Uuid
@@ -350,7 +344,6 @@ model ServiceReminderRule {
  @@unique([serviceId, daysBefore])
  @@map("service_reminder_rules")
 }
-
 model ServiceNotice {
  id String @id @default(uuid()) @db.Uuid
  serviceId String @db.Uuid
@@ -364,7 +357,6 @@ model ServiceNotice {
  @@index([serviceId, notifiedAt])
  @@map("service_notices")
 }
-
 model ServiceRenewal {
  id String @id @default(uuid()) @db.Uuid
  serviceId String @db.Uuid
@@ -378,7 +370,6 @@ model ServiceRenewal {
  @@index([serviceId, renewedOn])
  @@map("service_renewals")
 }
-
 model ImportBatch {
  id String @id @default(uuid()) @db.Uuid
  filename String
@@ -391,7 +382,6 @@ model ImportBatch {
  @@index([fileHash])
  @@map("import_batches")
 }
-
 model ImportRow {
  id String @id @default(uuid()) @db.Uuid
  batchId String @db.Uuid
@@ -407,7 +397,6 @@ model ImportRow {
  @@index([companyId])
  @@map("import_rows")
 }
-
 model CsvBatch {
  id String @id @default(uuid()) @db.Uuid
  userId String @db.Uuid
@@ -427,7 +416,6 @@ model CsvBatch {
  @@index([userId, createdAt])
  @@map("csv_batches")
 }
-
 model CsvEntry {
  id String @id @default(uuid()) @db.Uuid
  batchId String @db.Uuid
@@ -445,7 +433,6 @@ model CsvEntry {
  @@unique([batchId, line])
  @@map("csv_entries")
 }
-
 model Lead {
  id String @id @default(uuid()) @db.Uuid
  entryId String @unique @db.Uuid
@@ -471,9 +458,60 @@ model Lead {
  assessment String @default("UNREVIEWED")
  createdAt DateTime @default(now()) @db.Timestamptz(3)
  updatedAt DateTime @updatedAt
+ salesFlows SalesFlow[]
  @@index([name])
  @@index([phoneNormalized])
  @@index([websiteDomain])
  @@index([needsResearch])
  @@map("leads")
+}
+model SalesFlow {
+ id String @id @default(uuid()) @db.Uuid
+ leadId String @db.Uuid
+ lead Lead @relation(fields: [leadId], references: [id], onDelete: Restrict)
+ companyId String? @db.Uuid
+ company Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+ opportunityId String? @unique @db.Uuid
+ opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Restrict)
+ projectId String? @unique @db.Uuid
+ project Project? @relation(fields: [projectId], references: [id], onDelete: Restrict)
+ taskId String? @unique @db.Uuid
+ task Task? @relation(fields: [taskId], references: [id], onDelete: Restrict)
+ title String
+ stage String @default("INTERESTED")
+ version Int @default(0)
+ nextAction String?
+ nextActionAt DateTime? @db.Timestamptz(3)
+ layoutUrl String?
+ layoutVersion String?
+ layoutApprovedAt DateTime? @db.Timestamptz(3)
+ planName String @default("")
+ pageLimit Int @default(4)
+ creationPriceCents Int @default(0)
+ monthlyPriceCents Int @default(0)
+ initialPaymentCents Int @default(0)
+ paidCents Int @default(0)
+ paymentTerms String?
+ scope String?
+ contractConfirmed Boolean @default(false)
+ lostReason String?
+ notes String?
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ updatedAt DateTime @updatedAt
+ events SalesFlowEvent[]
+ @@index([leadId, stage])
+ @@index([companyId])
+ @@index([stage, nextActionAt])
+ @@map("sales_flows")
+}
+model SalesFlowEvent {
+ id String @id @default(uuid()) @db.Uuid
+ flowId String @db.Uuid
+ flow SalesFlow @relation(fields: [flowId], references: [id], onDelete: Restrict)
+ userId String @db.Uuid
+ user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+ description String
+ createdAt DateTime @default(now()) @db.Timestamptz(3)
+ @@index([flowId, createdAt])
+ @@map("sales_flow_events")
 }

@@ -1,46 +1,579 @@
 import Link from "next/link";
-import type {ReactNode} from "react";
-import {getDashboard} from "@/server/dashboard/queries";
-import {CrmIcon,type IconName} from "@/components/ui/crm-icon";
-import {daysUntil} from "@/lib/dashboard/clock.mjs";
+import type { ReactNode } from "react";
+import type { ProjectStage } from "@/generated/prisma/client";
+import { getDashboard } from "@/server/dashboard/queries";
+import { CrmIcon, type IconName } from "@/components/ui/crm-icon";
+import { daysUntil } from "@/lib/dashboard/clock.mjs";
 import styles from "./dashboard.module.css";
-export const dynamic="force-dynamic";
-export const runtime="nodejs";
-const stages={RESEARCHED:"Pesquisado",CONTACT_PENDING:"Contato pendente",CONTACTED:"Contatado",INTERESTED:"Interessado",PROPOSAL_SENT:"Proposta enviada",AWAITING_PAYMENT:"Aguardando pagamento",WON:"Ganho",LOST:"Perdido"} as const;
-const projectStages={AWAITING_PAYMENT:"Aguardando pagamento",AWAITING_CONTENT:"Aguardando conteúdo",IN_PRODUCTION:"Em produção",CLIENT_REVIEW:"Revisão do cliente",ADJUSTMENTS:"Ajustes",PUBLISHED:"Publicado"} as const;
-const activityKinds={CALL:"Ligação",MANUAL_MESSAGE:"Mensagem manual",RESPONSE:"Resposta",MEETING:"Reunião",NOTE:"Observação",PROPOSAL:"Proposta",REFUSAL:"Recusa"} as const;
-const money=(cents:number)=>new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(cents/100);
-function day(date:Date){return new Intl.DateTimeFormat("pt-BR",{timeZone:"UTC"}).format(date);}
-function moment(date:Date){return new Intl.DateTimeFormat("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(date);}
-function Panel({title,icon,link,label="Ver todos",children,alert=false}:{title:string;icon:IconName;link:string;label?:string;children:ReactNode;alert?:boolean}) {
- return <section className={`${styles.panel} ${alert?styles.alertPanel:""}`}><header className={styles.panelHeader}><h2><CrmIcon name={icon} size={18}/>{title}</h2><Link href={link}>{label}<CrmIcon name="chevron_right" size={13}/></Link></header>{children}</section>;
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+const stages = {
+    RESEARCHED: "Pesquisado",
+    CONTACT_PENDING: "Contato pendente",
+    CONTACTED: "Contatado",
+    INTERESTED: "Interessado",
+    PROPOSAL_SENT: "Proposta enviada",
+    AWAITING_PAYMENT: "Aguardando pagamento",
+    WON: "Ganho",
+    LOST: "Perdido",
+} as const;
+
+const projectStages = {
+    AWAITING_PAYMENT: "Aguardando pagamento",
+    AWAITING_CONTENT: "Aguardando conteúdo",
+    IN_PRODUCTION: "Em produção",
+    CLIENT_REVIEW: "Revisão do cliente",
+    ADJUSTMENTS: "Ajustes",
+    READY_TO_PUBLISH: "Aprovado para publicação",
+    PUBLISHED: "Publicado",
+} as const satisfies Record<ProjectStage, string>;
+
+const activityKinds = {
+    CALL: "Ligação",
+    MANUAL_MESSAGE: "Mensagem manual",
+    RESPONSE: "Resposta",
+    MEETING: "Reunião",
+    NOTE: "Observação",
+    PROPOSAL: "Proposta",
+    REFUSAL: "Recusa",
+} as const;
+
+const money = (cents: number) =>
+    new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+    }).format(cents / 100);
+
+function day(date: Date) {
+    return new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "UTC",
+    }).format(date);
 }
-function Empty({text}:{text:string}) {return <p className={styles.empty}>{text}</p>;}
-export default async function DashboardPage(){
- const d=await getDashboard();
- const metrics:{label:string;value:number;unit:string;detail:string;icon:IconName;href:string;danger?:boolean}[]=[
-  {label:"Aguardando Avaliação",value:d.unreviewed,unit:"empresas",detail:"Triagem inicial pendente",icon:"business",href:"/empresas?assessment=UNREVIEWED"},
-  {label:"Oportunidades em Aberto",value:d.openCount,unit:"negociações",detail:"Não é faturamento",icon:"point_of_sale",href:"/oportunidades"},
-  {label:"Tarefas de Hoje",value:d.todayCount,unit:"tarefas",detail:"Pendências para hoje",icon:"task_alt",href:"/tarefas"},
-  {label:"Tarefas Atrasadas",value:d.lateCount,unit:"pendências",detail:"Requer atenção",icon:"schedule",href:"/tarefas",danger:true},
-  {label:"Propostas em Aberto",value:d.proposalCount,unit:"propostas",detail:"Etapa proposta enviada",icon:"sell",href:"/oportunidades"},
-  {label:"Projetos em Andamento",value:d.projectCount,unit:"projetos",detail:"Ainda não publicados",icon:"code",href:"/projetos"},
-  {label:"Domínios & Hospedagem",value:d.serviceCount,unit:"vencimentos",detail:"Vencidos ou próximos 30d",icon:"dns",href:"/servicos"},
- ];
- const pipelineKeys=["RESEARCHED","CONTACT_PENDING","CONTACTED","INTERESTED","PROPOSAL_SENT","AWAITING_PAYMENT"] as const;
- const totals=d.pipeline.reduce((n,p)=>n+(p._sum.creationPriceCents??0),0);
- function taskList(tasks:typeof d.todayTasks,late=false){return tasks.length?<div className={styles.taskList}>{tasks.map(t=><div key={t.id} className={styles.task}><span className={styles.taskIcon}><CrmIcon name={late?"schedule":"task_alt"} size={16}/></span><div className={styles.taskContent}><Link href="/tarefas">{t.title}</Link>{t.company?<Link href={`/empresas/${t.company.id}`} className={styles.secondaryText}>{t.company.name}</Link>:<span className={styles.secondaryText}>Tarefa interna</span>}{t.company?.doNotContact&&<span className={styles.blocked}><CrmIcon name="block" size={11}/>Não contatar</span>}</div><span className={`${styles.time} ${late?styles.red:""}`}>{t.dueAt?moment(t.dueAt):t.dueDate?day(t.dueDate):"Sem data"}</span></div>)}</div>:<Empty text={late?"Nenhuma tarefa atrasada.":"Nenhuma tarefa pendente para hoje."}/>;}
- return <div className={styles.dashboard}>
-  <div className={styles.heading}><div><p className={styles.eyebrow}>PAINEL OPERACIONAL</p><h1>Visão Geral</h1><p>Prioridades, negociações e entregas da ORCK DEV.</p></div><div className={styles.headingActions}><span className={styles.date}><CrmIcon name="schedule" size={14}/>{new Intl.DateTimeFormat("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"long",year:"numeric"}).format(d.clock.now)}</span><Link className={styles.secondaryButton} href="/importacoes"><CrmIcon name="upload_file" size={15}/>Importar CSV</Link><Link className={styles.primaryButton} href="/empresas/nova"><CrmIcon name="add" size={15}/>Nova empresa</Link></div></div>
-  <section aria-label="Métricas Principais" className={styles.metrics}>{metrics.map(m=><Link key={m.label} href={m.href} className={`${styles.metric} ${m.danger?styles.dangerMetric:""}`}><div className={styles.metricTop}><span>{m.label}</span><CrmIcon name={m.icon} size={18}/></div><div className={styles.metricMid}><strong>{m.value.toLocaleString("pt-BR")}</strong><span>{m.unit}</span></div><p>{m.detail}</p></Link>)}</section>
-  <div className={styles.mainGrid}><div className={styles.mainColumn}>
-   <Panel title="Tarefas de hoje" icon="task_alt" link="/tarefas">{taskList(d.todayTasks)}<footer className={styles.panelFooter}>{d.todayCount} pendente(s) hoje · mostrando até 6<Link href="/tarefas">Abrir agenda<CrmIcon name="chevron_right" size={12}/></Link></footer></Panel>
-   <Panel title="Pipeline comercial" icon="point_of_sale" link="/oportunidades"><div className={styles.pipelineIntro}><span>Oportunidades por etapa</span><span className={styles.pipelineValue}>{money(totals)}<small>valor proposto · não é receita</small></span></div><div className={styles.pipeline}>{pipelineKeys.map((key,i)=>{const group=d.pipeline.find(p=>p.stage===key),n=group?._count._all??0;return <div key={key} className={styles.pipelineStage}><div className={styles.pipelineBar} style={{background:`hsl(${244-i*5} 75% ${91-i*7}%)`}}/><span>{stages[key]}</span><strong>{n}</strong><small>{money(group?._sum.creationPriceCents??0)}</small></div>;})}</div><div className={styles.tableScroll}><table className={styles.table}><caption className={styles.srOnly}>Negociações abertas atualizadas recentemente</caption><thead><tr><th scope="col">Empresa / oportunidade</th><th scope="col">Etapa</th><th scope="col">Valor proposto</th><th scope="col">Ação</th></tr></thead><tbody>{d.opportunities.map(o=><tr key={o.id}><td><Link href={`/empresas/${o.company.id}`}>{o.company.name}</Link><small>{o.title}</small>{o.company.doNotContact&&<span className={styles.blocked}>Não contatar</span>}</td><td><span className={styles.badge}>{stages[o.stage]}</span></td><td className={styles.mono}>{o.creationPriceCents===null?"Não informado":money(o.creationPriceCents)}</td><td><Link className={styles.tableAction} href="/oportunidades" aria-label={`Ver oportunidades de ${o.company.name}`}><CrmIcon name="open_in_new" size={15}/></Link></td></tr>)}{!d.opportunities.length&&<tr><td colSpan={4}><Empty text="Nenhuma oportunidade aberta."/></td></tr>}</tbody></table></div><footer className={styles.panelFooter}>Valores negociados não representam recebimentos. Valores não informados ficam fora da soma.</footer></Panel>
-   <Panel title="Projetos em andamento" icon="code" link="/projetos"><div className={styles.tableScroll}><table className={styles.table}><caption className={styles.srOnly}>Projetos ainda não publicados</caption><thead><tr><th scope="col">Projeto / cliente</th><th scope="col">Etapa</th><th scope="col">Checklist</th><th scope="col">Prazo</th></tr></thead><tbody>{d.projects.map(p=>{const complete=p.checklist.length,total=p._count.checklist;return <tr key={p.id}><td><Link href="/projetos">{p.name}</Link><small>{p.company.name} · {p.planNameSnapshot}</small></td><td><span className={styles.badge}>{projectStages[p.stage]}</span></td><td>{total?<><span className={styles.mono}>{complete}/{total}</span><progress max={total} value={complete} aria-label={`Checklist de ${p.name}`}/></>:<span className={styles.muted}>Sem checklist</span>}</td><td className={styles.mono}>{p.confirmedDeadline?day(p.confirmedDeadline):"Não definido"}</td></tr>;})}{!d.projects.length&&<tr><td colSpan={4}><Empty text="Nenhum projeto em andamento."/></td></tr>}</tbody></table></div></Panel>
-  </div><aside className={styles.sideColumn} aria-label="Atenção e atividade recente">
-   <Panel title="Atrasadas · atenção imediata" icon="schedule" link="/tarefas" alert>{taskList(d.lateTasks,true)}<footer className={styles.panelFooter}>{d.lateCount} pendência(s) vencida(s) · até 4 exibidas</footer></Panel>
-   <Panel title="Domínios & Hospedagem" icon="dns" link="/servicos"><p className={styles.panelSubtitle}>Vencidos e a vencer nos próximos 30 dias</p>{d.services.length?<div className={styles.serviceList}>{d.services.map(s=>{const days=daysUntil(s.dueOn,d.clock.day);return <div key={s.id} className={styles.service}><span className={styles.serviceIcon}><CrmIcon name="dns" size={17}/></span><div><Link href="/servicos">{s.identifier}</Link><small>{s.company.name} · {s.kind==="DOMAIN"?"Domínio":"Hospedagem"}</small><small>Responsável: {s.renewalResponsible==="ORCK_DEV"?"ORCK DEV":"Cliente"}</small></div><span className={`${styles.dueBadge} ${days<0?styles.overdue:""}`}>{days<0?`${Math.abs(days)}d atrasado`:days===0?"Hoje":`Em ${days}d`}</span></div>;})}</div>:<Empty text="Nenhum vencimento nesse período."/>}</Panel>
-   <Panel title="Últimas atividades" icon="call" link="/empresas" label="Empresas">{d.activities.length?<ol className={styles.timeline}>{d.activities.map(a=><li key={a.id}><span className={styles.timelineDot}/><div><div className={styles.timelineTop}><strong>{activityKinds[a.kind]}</strong><time dateTime={a.occurredAt.toISOString()}>{moment(a.occurredAt)}</time></div><Link href={`/empresas/${a.company.id}`}>{a.company.name}</Link><p>{a.description}</p></div></li>)}</ol>:<Empty text="Nenhuma atividade registrada."/>}</Panel>
-  </aside></div><footer className={styles.bottomNote}>Dados do banco · atualizado ao abrir a página · horário de Brasília. Empresas arquivadas ficam fora dos indicadores vinculados. Nenhuma mensagem ou cobrança é enviada automaticamente.</footer>
- </div>;
+
+function moment(date: Date) {
+    return new Intl.DateTimeFormat("pt-BR", {
+        timeZone: "America/Sao_Paulo",
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(date);
+}
+
+type PanelProps = {
+    title: string;
+    icon: IconName;
+    link: string;
+    label?: string;
+    children: ReactNode;
+    alert?: boolean;
+};
+
+function Panel({
+    title,
+    icon,
+    link,
+    label = "Ver todos",
+    children,
+    alert = false,
+}: PanelProps) {
+    return (
+        <section className={`${styles.panel} ${alert ? styles.alertPanel : ""}`}>
+            <header className={styles.panelHeader}>
+                <h2>
+                    <CrmIcon name={icon} size={18} />
+                    {title}
+                </h2>
+                <Link href={link}>
+                    {label}
+                    <CrmIcon name="chevron_right" size={13} />
+                </Link>
+            </header>
+            {children}
+        </section>
+    );
+}
+
+function Empty({ text }: { text: string }) {
+    return <p className={styles.empty}>{text}</p>;
+}
+
+export default async function DashboardPage() {
+    const d = await getDashboard();
+
+    const metrics: {
+        label: string;
+        value: number;
+        unit: string;
+        detail: string;
+        icon: IconName;
+        href: string;
+        danger?: boolean;
+    }[] = [
+        {
+            label: "Aguardando Avaliação",
+            value: d.unreviewed,
+            unit: "empresas",
+            detail: "Triagem inicial pendente",
+            icon: "business",
+            href: "/empresas?assessment=UNREVIEWED",
+        },
+        {
+            label: "Oportunidades em Aberto",
+            value: d.openCount,
+            unit: "negociações",
+            detail: "Não é faturamento",
+            icon: "point_of_sale",
+            href: "/oportunidades",
+        },
+        {
+            label: "Tarefas de Hoje",
+            value: d.todayCount,
+            unit: "tarefas",
+            detail: "Pendências para hoje",
+            icon: "task_alt",
+            href: "/tarefas",
+        },
+        {
+            label: "Tarefas Atrasadas",
+            value: d.lateCount,
+            unit: "pendências",
+            detail: "Requer atenção",
+            icon: "schedule",
+            href: "/tarefas",
+            danger: true,
+        },
+        {
+            label: "Propostas em Aberto",
+            value: d.proposalCount,
+            unit: "propostas",
+            detail: "Etapa proposta enviada",
+            icon: "sell",
+            href: "/oportunidades",
+        },
+        {
+            label: "Projetos em Andamento",
+            value: d.projectCount,
+            unit: "projetos",
+            detail: "Ainda não publicados",
+            icon: "code",
+            href: "/projetos",
+        },
+        {
+            label: "Domínios & Hospedagem",
+            value: d.serviceCount,
+            unit: "vencimentos",
+            detail: "Vencidos ou próximos 30d",
+            icon: "dns",
+            href: "/servicos",
+        },
+    ];
+
+    const pipelineKeys = [
+        "RESEARCHED",
+        "CONTACT_PENDING",
+        "CONTACTED",
+        "INTERESTED",
+        "PROPOSAL_SENT",
+        "AWAITING_PAYMENT",
+    ] as const;
+
+    const totals = d.pipeline.reduce(
+        (n, p) => n + (p._sum.creationPriceCents ?? 0),
+        0,
+    );
+
+    function taskList(tasks: typeof d.todayTasks, late = false) {
+        if (!tasks.length) {
+            return (
+                <Empty
+                    text={
+                        late
+                            ? "Nenhuma tarefa atrasada."
+                            : "Nenhuma tarefa pendente para hoje."
+                    }
+                />
+            );
+        }
+
+        return (
+            <div className={styles.taskList}>
+                {tasks.map((t) => (
+                    <div key={t.id} className={styles.task}>
+                        <span className={styles.taskIcon}>
+                            <CrmIcon
+                                name={late ? "schedule" : "task_alt"}
+                                size={16}
+                            />
+                        </span>
+                        <div className={styles.taskContent}>
+                            <Link href="/tarefas">{t.title}</Link>
+                            {t.company ? (
+                                <Link
+                                    href={`/empresas/${t.company.id}`}
+                                    className={styles.secondaryText}
+                                >
+                                    {t.company.name}
+                                </Link>
+                            ) : (
+                                <span className={styles.secondaryText}>
+                                    Tarefa interna
+                                </span>
+                            )}
+                            {t.company?.doNotContact && (
+                                <span className={styles.blocked}>
+                                    <CrmIcon name="block" size={11} />
+                                    Não contatar
+                                </span>
+                            )}
+                        </div>
+                        <span className={`${styles.time} ${late ? styles.red : ""}`}>
+                            {t.dueAt
+                                ? moment(t.dueAt)
+                                : t.dueDate
+                                  ? day(t.dueDate)
+                                  : "Sem data"}
+                        </span>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    return (
+        <div className={styles.dashboard}>
+            <div className={styles.heading}>
+                <div>
+                    <p className={styles.eyebrow}>PAINEL OPERACIONAL</p>
+                    <h1>Visão Geral</h1>
+                    <p>Prioridades, negociações e entregas da ORCK DEV.</p>
+                </div>
+                <div className={styles.headingActions}>
+                    <span className={styles.date}>
+                        <CrmIcon name="schedule" size={14} />
+                        {new Intl.DateTimeFormat("pt-BR", {
+                            timeZone: "America/Sao_Paulo",
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                        }).format(d.clock.now)}
+                    </span>
+                    <Link className={styles.secondaryButton} href="/importacoes">
+                        <CrmIcon name="upload_file" size={15} />
+                        Importar CSV
+                    </Link>
+                    <Link className={styles.primaryButton} href="/empresas/nova">
+                        <CrmIcon name="add" size={15} />
+                        Nova empresa
+                    </Link>
+                </div>
+            </div>
+
+            <section aria-label="Métricas Principais" className={styles.metrics}>
+                {metrics.map((m) => (
+                    <Link
+                        key={m.label}
+                        href={m.href}
+                        className={`${styles.metric} ${m.danger ? styles.dangerMetric : ""}`}
+                    >
+                        <div className={styles.metricTop}>
+                            <span>{m.label}</span>
+                            <CrmIcon name={m.icon} size={18} />
+                        </div>
+                        <div className={styles.metricMid}>
+                            <strong>{m.value.toLocaleString("pt-BR")}</strong>
+                            <span>{m.unit}</span>
+                        </div>
+                        <p>{m.detail}</p>
+                    </Link>
+                ))}
+            </section>
+
+            <div className={styles.mainGrid}>
+                <div className={styles.mainColumn}>
+                    <Panel title="Tarefas de hoje" icon="task_alt" link="/tarefas">
+                        {taskList(d.todayTasks)}
+                        <footer className={styles.panelFooter}>
+                            {d.todayCount} pendente(s) hoje · mostrando até 6
+                            <Link href="/tarefas">
+                                Abrir agenda
+                                <CrmIcon name="chevron_right" size={12} />
+                            </Link>
+                        </footer>
+                    </Panel>
+
+                    <Panel
+                        title="Pipeline comercial"
+                        icon="point_of_sale"
+                        link="/oportunidades"
+                    >
+                        <div className={styles.pipelineIntro}>
+                            <span>Oportunidades por etapa</span>
+                            <span className={styles.pipelineValue}>
+                                {money(totals)}
+                                <small>valor proposto · não é receita</small>
+                            </span>
+                        </div>
+                        <div className={styles.pipeline}>
+                            {pipelineKeys.map((key, i) => {
+                                const group = d.pipeline.find((p) => p.stage === key);
+                                const n = group?._count._all ?? 0;
+
+                                return (
+                                    <div key={key} className={styles.pipelineStage}>
+                                        <div
+                                            className={styles.pipelineBar}
+                                            style={{
+                                                background: `hsl(${244 - i * 5} 75% ${91 - i * 7}%)`,
+                                            }}
+                                        />
+                                        <span>{stages[key]}</span>
+                                        <strong>{n}</strong>
+                                        <small>
+                                            {money(group?._sum.creationPriceCents ?? 0)}
+                                        </small>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className={styles.tableScroll}>
+                            <table className={styles.table}>
+                                <caption className={styles.srOnly}>
+                                    Negociações abertas atualizadas recentemente
+                                </caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Empresa / oportunidade</th>
+                                        <th scope="col">Etapa</th>
+                                        <th scope="col">Valor proposto</th>
+                                        <th scope="col">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {d.opportunities.map((o) => (
+                                        <tr key={o.id}>
+                                            <td>
+                                                <Link href={`/empresas/${o.company.id}`}>
+                                                    {o.company.name}
+                                                </Link>
+                                                <small>{o.title}</small>
+                                                {o.company.doNotContact && (
+                                                    <span className={styles.blocked}>
+                                                        Não contatar
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <span className={styles.badge}>
+                                                    {stages[o.stage]}
+                                                </span>
+                                            </td>
+                                            <td className={styles.mono}>
+                                                {o.creationPriceCents === null
+                                                    ? "Não informado"
+                                                    : money(o.creationPriceCents)}
+                                            </td>
+                                            <td>
+                                                <Link
+                                                    className={styles.tableAction}
+                                                    href="/oportunidades"
+                                                    aria-label={`Ver oportunidades de ${o.company.name}`}
+                                                >
+                                                    <CrmIcon name="open_in_new" size={15} />
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {!d.opportunities.length && (
+                                        <tr>
+                                            <td colSpan={4}>
+                                                <Empty text="Nenhuma oportunidade aberta." />
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                        <footer className={styles.panelFooter}>
+                            Valores negociados não representam recebimentos. Valores
+                            não informados ficam fora da soma.
+                        </footer>
+                    </Panel>
+
+                    <Panel title="Projetos em andamento" icon="code" link="/projetos">
+                        <div className={styles.tableScroll}>
+                            <table className={styles.table}>
+                                <caption className={styles.srOnly}>
+                                    Projetos ainda não publicados
+                                </caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Projeto / cliente</th>
+                                        <th scope="col">Etapa</th>
+                                        <th scope="col">Checklist</th>
+                                        <th scope="col">Prazo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {d.projects.map((p) => {
+                                        const complete = p.checklist.length;
+                                        const total = p._count.checklist;
+
+                                        return (
+                                            <tr key={p.id}>
+                                                <td>
+                                                    <Link href="/projetos">{p.name}</Link>
+                                                    <small>
+                                                        {p.company.name} · {p.planNameSnapshot}
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <span className={styles.badge}>
+                                                        {projectStages[p.stage]}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    {total ? (
+                                                        <>
+                                                            <span className={styles.mono}>
+                                                                {complete}/{total}
+                                                            </span>
+                                                            <progress
+                                                                max={total}
+                                                                value={complete}
+                                                                aria-label={`Checklist de ${p.name}`}
+                                                            />
+                                                        </>
+                                                    ) : (
+                                                        <span className={styles.muted}>
+                                                            Sem checklist
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className={styles.mono}>
+                                                    {p.confirmedDeadline
+                                                        ? day(p.confirmedDeadline)
+                                                        : "Não definido"}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {!d.projects.length && (
+                                        <tr>
+                                            <td colSpan={4}>
+                                                <Empty text="Nenhum projeto em andamento." />
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Panel>
+                </div>
+
+                <aside
+                    className={styles.sideColumn}
+                    aria-label="Atenção e atividade recente"
+                >
+                    <Panel
+                        title="Atrasadas · atenção imediata"
+                        icon="schedule"
+                        link="/tarefas"
+                        alert
+                    >
+                        {taskList(d.lateTasks, true)}
+                        <footer className={styles.panelFooter}>
+                            {d.lateCount} pendência(s) vencida(s) · até 4 exibidas
+                        </footer>
+                    </Panel>
+
+                    <Panel title="Domínios & Hospedagem" icon="dns" link="/servicos">
+                        <p className={styles.panelSubtitle}>
+                            Vencidos e a vencer nos próximos 30 dias
+                        </p>
+                        {d.services.length ? (
+                            <div className={styles.serviceList}>
+                                {d.services.map((service) => {
+                                    const days = daysUntil(service.dueOn, d.clock.day);
+
+                                    return (
+                                        <div key={service.id} className={styles.service}>
+                                            <span className={styles.serviceIcon}>
+                                                <CrmIcon name="dns" size={17} />
+                                            </span>
+                                            <div>
+                                                <Link href="/servicos">
+                                                    {service.identifier}
+                                                </Link>
+                                                <small>
+                                                    {service.company.name} · {service.kind === "DOMAIN"
+                                                        ? "Domínio"
+                                                        : "Hospedagem"}
+                                                </small>
+                                                <small>
+                                                    Responsável: {service.renewalResponsible === "ORCK_DEV"
+                                                        ? "ORCK DEV"
+                                                        : "Cliente"}
+                                                </small>
+                                            </div>
+                                            <span
+                                                className={`${styles.dueBadge} ${days < 0 ? styles.overdue : ""}`}
+                                            >
+                                                {days < 0
+                                                    ? `${Math.abs(days)}d atrasado`
+                                                    : days === 0
+                                                      ? "Hoje"
+                                                      : `Em ${days}d`}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <Empty text="Nenhum vencimento nesse período." />
+                        )}
+                    </Panel>
+
+                    <Panel
+                        title="Últimas atividades"
+                        icon="call"
+                        link="/empresas"
+                        label="Empresas"
+                    >
+                        {d.activities.length ? (
+                            <ol className={styles.timeline}>
+                                {d.activities.map((a) => (
+                                    <li key={a.id}>
+                                        <span className={styles.timelineDot} />
+                                        <div>
+                                            <div className={styles.timelineTop}>
+                                                <strong>{activityKinds[a.kind]}</strong>
+                                                <time dateTime={a.occurredAt.toISOString()}>
+                                                    {moment(a.occurredAt)}
+                                                </time>
+                                            </div>
+                                            <Link href={`/empresas/${a.company.id}`}>
+                                                {a.company.name}
+                                            </Link>
+                                            <p>{a.description}</p>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ol>
+                        ) : (
+                            <Empty text="Nenhuma atividade registrada." />
+                        )}
+                    </Panel>
+                </aside>
+            </div>
+
+            <footer className={styles.bottomNote}>
+                Dados do banco · atualizado ao abrir a página · horário de Brasília.
+                Empresas arquivadas ficam fora dos indicadores vinculados. Nenhuma
+                mensagem ou cobrança é enviada automaticamente.
+            </footer>
+        </div>
+    );
 }
