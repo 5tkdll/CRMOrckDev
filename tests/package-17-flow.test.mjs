@@ -1,55 +1,66 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {STAGES,PROJECT_STAGES,nextStages,nextProjectStages,money,checkFlow} from '../src/lib/sales-flow.mjs';
-import {validateEdit,restoreAssessment,markDeleted,restoreSelection} from '../src/lib/csv-import/lead-lifecycle.mjs';
-const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const current=(stage,extra={})=>({stage,layoutUrl:null,layoutVersion:null,layoutApprovedAt:null,...extra});
-const input=(stage,extra={})=>({stage,layoutUrl:null,layoutVersion:null,companyId:null,planName:'',scope:null,paymentTerms:null,creationPriceCents:0,monthlyPriceCents:0,initialPaymentCents:0,paidCents:0,contractConfirmed:false,lostReason:null,...extra});
-const deal={companyId:'empresa',planName:'Plano fictício',scope:'Escopo de teste',paymentTerms:'Entrada acordada',creationPriceCents:89900,monthlyPriceCents:7990,initialPaymentCents:20000,paidCents:20000,contractConfirmed:true};
-const values={name:'Lead fictício',phone:'',instagram:'',website:'',location:'',segment:'',rating:'4.3',sourceUrl:'',researchedAt:'',notes:''};
-test('conversão de vírgula monetária é exata',()=>assert.equal(money('899,99'),89999));
-test('conversão de centavos evita erro de ponto flutuante',()=>assert.equal(money('0.29'),29));
-test('valores inteiros são reais',()=>assert.equal(money('12'),1200));
-test('zero pode ser salvo no começo da negociação',()=>assert.equal(money('0'),0));
-for(const v of ['-1','NaN','1.234','1e3','1.000,00','abc','Infinity','10000000'])test('valor inválido recusado: '+v,()=>assert.throws(()=>money(v)));
-test('interesse vai para briefing sem exigir CPF',()=>assert.doesNotThrow(()=>checkFlow(current('INTERESTED'),input('BRIEFING'))));
-test('layout pré-venda é opcional',()=>assert.doesNotThrow(()=>checkFlow(current('BRIEFING'),input('FORMALIZATION'))));
-test('layout enviado fica aguardando aprovação',()=>assert.doesNotThrow(()=>checkFlow(current('LAYOUT_PREPARING'),input('LAYOUT_SENT',{layoutUrl:'https://exemplo.invalid/layout'}))));
-test('não registra envio sem referência de layout',()=>assert.throws(()=>checkFlow(current('LAYOUT_PREPARING'),input('LAYOUT_SENT'))));
-test('aprovação exige referência do layout',()=>assert.throws(()=>checkFlow(current('LAYOUT_SENT'),input('LAYOUT_APPROVED'))));
-test('cliente pode solicitar ajustes',()=>assert.doesNotThrow(()=>checkFlow(current('LAYOUT_SENT'),input('LAYOUT_CHANGES'))));
-test('layout corrigido volta para aprovação',()=>assert.doesNotThrow(()=>checkFlow(current('LAYOUT_CHANGES'),input('LAYOUT_SENT',{layoutUrl:'https://exemplo.invalid/v2'}))));
-test('layout aprovado não ganha a venda',()=>assert.ok(!nextStages('LAYOUT_APPROVED').includes('WON')));
-test('alterar versão aprovada exige nova revisão',()=>assert.throws(()=>checkFlow(current('LAYOUT_APPROVED',{layoutApprovedAt:new Date(),layoutUrl:'https://exemplo.invalid/v1',layoutVersion:'1'}),input('FORMALIZATION',{layoutUrl:'https://exemplo.invalid/v2',layoutVersion:'2'}))));
-test('alterar layout pela etapa de ajustes é permitido',()=>assert.doesNotThrow(()=>checkFlow(current('LAYOUT_APPROVED',{layoutApprovedAt:new Date(),layoutUrl:'https://exemplo.invalid/v1'}),input('LAYOUT_CHANGES',{layoutUrl:'https://exemplo.invalid/v2'}))));
-test('formalização exige empresa antes do pagamento',()=>assert.throws(()=>checkFlow(current('FORMALIZATION'),input('AWAITING_PAYMENT'))));
-test('formalização exige escopo',()=>assert.throws(()=>checkFlow(current('FORMALIZATION'),input('AWAITING_PAYMENT',{...deal,scope:null}))));
-test('formalização exige condições de pagamento',()=>assert.throws(()=>checkFlow(current('FORMALIZATION'),input('AWAITING_PAYMENT',{...deal,paymentTerms:null}))));
-test('condição inicial precisa ser positiva',()=>assert.throws(()=>checkFlow(current('FORMALIZATION'),input('AWAITING_PAYMENT',{...deal,initialPaymentCents:0}))));
-test('entrada não pode superar o total',()=>assert.throws(()=>checkFlow(current('FORMALIZATION'),input('AWAITING_PAYMENT',{...deal,initialPaymentCents:90000}))));
-test('entrada positiva permite aguardar pagamento',()=>assert.doesNotThrow(()=>checkFlow(current('FORMALIZATION'),input('AWAITING_PAYMENT',{...deal,paidCents:0,contractConfirmed:false}))));
-test('sem contratação não ganha a venda',()=>assert.throws(()=>checkFlow(current('AWAITING_PAYMENT'),input('WON',{...deal,contractConfirmed:false}))));
-test('sem entrada recebida não ganha a venda',()=>assert.throws(()=>checkFlow(current('AWAITING_PAYMENT'),input('WON',{...deal,paidCents:19999}))));
-test('entrada acordada pode liberar projeto sem pagamento integral',()=>assert.doesNotThrow(()=>checkFlow(current('AWAITING_PAYMENT'),input('WON',deal))));
-test('recebimento acima do preço é recusado',()=>assert.throws(()=>checkFlow(current('AWAITING_PAYMENT'),input('WON',{...deal,paidCents:90000}))));
-test('negociação perdida exige motivo',()=>assert.throws(()=>checkFlow(current('BRIEFING'),input('LOST'))));
-test('perda com motivo é registrada',()=>assert.doesNotThrow(()=>checkFlow(current('BRIEFING'),input('LOST',{lostReason:'Cliente adiou a contratação'}))));
-for(const stage of ['WON','LOST'])test('negociação encerrada não é reaberta silenciosamente: '+stage,()=>assert.throws(()=>checkFlow(current(stage),input('BRIEFING'))));
-test('estado comercial desconhecido é recusado',()=>assert.throws(()=>checkFlow(current('INTERESTED'),input('PUBLICADO'))));
-test('todos os destinos comerciais existem',()=>{for(const k of Object.keys(STAGES))for(const d of nextStages(k))assert.ok(STAGES[d]);});
-test('todos os destinos de projeto existem',()=>{for(const k of Object.keys(PROJECT_STAGES))for(const d of nextProjectStages(k))assert.ok(PROJECT_STAGES[d]);});
-test('revisão do site é distinta da aprovação comercial',()=>assert.deepEqual(nextProjectStages('CLIENT_REVIEW'),['CLIENT_REVIEW','ADJUSTMENTS','READY_TO_PUBLISH']));
-test('publicação só é oferecida após aprovação do site',()=>{assert.ok(!nextProjectStages('IN_PRODUCTION').includes('PUBLISHED'));assert.ok(nextProjectStages('READY_TO_PUBLISH').includes('PUBLISHED'));});
-test('sem interesse é aceito como análise comercial',()=>assert.equal(validateEdit(JSON.stringify({values,assessment:'NO_INTEREST',version:'2026-11-09T17:00:00Z'})).assessment,'NO_INTEREST'));
-test('restauração preserva classificação antiga sem convertê-la em recusa',()=>assert.equal(restoreAssessment(markDeleted('HAS_WEBSITE')),'HAS_WEBSITE'));
-test('seleção reaberta respeita bloqueio de linha importada',()=>assert.equal(restoreSelection([{id:'1',locked:true,errors:[],conflicts:[],data:values}],{'1':{selected:true,allowDuplicate:true,reason:'',values}})['1'].selected,false));
-test('empresa não exibe avaliação ou restrição e mantém dados antigos ocultos',()=>{const s=read('src/app/(crm)/empresas/company-form.tsx');assert.ok(!s.includes('title="Avaliação Comercial"'));assert.ok(!s.includes('title="Restrição de Contato"'));assert.ok(!s.includes('<dt>Avaliação</dt>'));for(const key of ['assessment','doNotContact','doNotContactReason'])assert.ok(s.includes('type="hidden" name="'+key+'"'));assert.ok(s.includes('number={5} title="Observações Internas"'));});
-test('CEP, versão e validação documental são preservados',()=>{const s=read('src/app/(crm)/empresas/company-form.tsx');for(const part of ['AbortController','digits(live.current.postalCode)!==cep','validCpf','validCnpj','slice(0,5)','useActionState','acknowledgeDuplicates','name="updatedAt"'])assert.ok(s.includes(part));});
-test('nota e avaliação são colunas diferentes; aviso genérico saiu',()=>{const s=read('src/components/visual-crm/leads-table.tsx');assert.ok(s.includes("'Google','Análise comercial'"));assert.ok(!s.includes('Pesquisar dados'));assert.ok(!s.includes('Não avaliado'));assert.ok(!s.includes('value="HAS_WEBSITE"'));assert.ok(!s.includes('value="DUPLICATE"'));assert.ok(s.includes('value="NO_INTEREST"'));});
-test('servidor usa autenticação, transação, trava e versão',()=>{const s=read('src/server/sales/actions.ts');for(const part of ['await requireUser()','$transaction','pg_advisory_xact_lock','current.version!==version','isDeleted','doNotContact','version:{increment:1}'])assert.ok(s.includes(part));});
-test('fechamento cria projeto único e copia condições',()=>{const s=read('src/server/sales/actions.ts');for(const part of ["stage==='WON'&&company&&opportunityId&&!projectId","stage:'AWAITING_CONTENT'",'planNameSnapshot:input.planName','creationPriceCents:input.creationPriceCents','events:{create:'])assert.ok(s.includes(part));});
-test('migração é aditiva, sem apagar ou reclassificar leads',()=>{const s=read('prisma/migrations/202611090002_sales_flow/migration.sql');assert.ok(!/\b(DROP|DELETE|TRUNCATE)\s+(TABLE|FROM)/i.test(s));assert.ok(!/UPDATE\s+"?leads/i.test(s));assert.ok(s.includes('CREATE TABLE "sales_flows"'));assert.ok(s.includes('CREATE TABLE "sales_flow_events"'));assert.ok(s.includes('ON DELETE RESTRICT'));assert.ok(!/GRANT[^;]*\bDELETE\b/i.test(s));});
-test('schema preserva relacionamentos e contém novos controles',()=>{const s=read('prisma/schema.prisma');for(const part of ['model CsvEntry','model Lead','model SalesFlow','model SalesFlowEvent','taskId String? @unique','opportunityId String? @unique','projectId String? @unique','READY_TO_PUBLISH'])assert.ok(s.includes(part));});
-test('editor registra contratação sem checkbox genérico',()=>{const s=read('src/components/visual-crm/sales-board.tsx');assert.ok(!s.includes('type="checkbox"'));assert.ok(s.includes('Contratação confirmada'));assert.ok(s.includes('Nova negociação com este lead'));});
-test('projeto exige endereço na publicação e registra atividade',()=>{const s=read('src/server/sales/actions.ts');assert.ok(s.includes("stage==='PUBLISHED'&&!website"));assert.ok(s.includes('tx.activity.create'));});
+import { readFileSync } from 'node:fs';
+import { STAGES, PROJECT_STAGES, nextStages, nextProjectStages, money, checkFlow } from '../src/lib/sales-flow.mjs';
+import { validateEdit, restoreAssessment, markDeleted, restoreSelection } from '../src/lib/csv-import/lead-lifecycle.mjs';
+const read = p => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const current = (stage, extra = {}) => ({ stage, layoutUrl: null, layoutVersion: null, layoutApprovedAt: null, ...extra });
+const input = (stage, extra = {}) => ({ stage, layoutUrl: null, layoutVersion: null, companyId: null, planName: '', scope: null, paymentTerms: null, creationPriceCents: 0, monthlyPriceCents: 0, initialPaymentCents: 0, paidCents: 0, contractConfirmed: false, lostReason: null, ...extra });
+const deal = { companyId: 'empresa', planName: 'Plano fictício', scope: 'Escopo de teste', paymentTerms: 'Entrada acordada', creationPriceCents: 89900, monthlyPriceCents: 7990, initialPaymentCents: 20000, paidCents: 20000, contractConfirmed: true };
+const values = { name: 'Lead fictício', phone: '', instagram: '', website: '', location: '', segment: '', rating: '4.3', sourceUrl: '', researchedAt: '', notes: '' };
+test('conversão de vírgula monetária é exata', () => assert.equal(money('899,99'), 89999));
+test('conversão de centavos evita erro de ponto flutuante', () => assert.equal(money('0.29'), 29));
+test('valores inteiros são reais', () => assert.equal(money('12'), 1200));
+test('zero pode ser salvo no começo da negociação', () => assert.equal(money('0'), 0));
+for (const v of ['-1', 'NaN', '1.234', '1e3', '1.000,00', 'abc', 'Infinity', '10000000'])
+    test('valor inválido recusado: ' + v, () => assert.throws(() => money(v)));
+test('interesse vai para briefing sem exigir CPF', () => assert.doesNotThrow(() => checkFlow(current('INTERESTED'), input('BRIEFING'))));
+test('layout pré-venda é opcional', () => assert.doesNotThrow(() => checkFlow(current('BRIEFING'), input('FORMALIZATION'))));
+test('layout enviado fica aguardando aprovação', () => assert.doesNotThrow(() => checkFlow(current('LAYOUT_PREPARING'), input('LAYOUT_SENT', { layoutUrl: 'https://exemplo.invalid/layout' }))));
+test('não registra envio sem referência de layout', () => assert.throws(() => checkFlow(current('LAYOUT_PREPARING'), input('LAYOUT_SENT'))));
+test('aprovação exige referência do layout', () => assert.throws(() => checkFlow(current('LAYOUT_SENT'), input('LAYOUT_APPROVED'))));
+test('cliente pode solicitar ajustes', () => assert.doesNotThrow(() => checkFlow(current('LAYOUT_SENT'), input('LAYOUT_CHANGES'))));
+test('layout corrigido volta para aprovação', () => assert.doesNotThrow(() => checkFlow(current('LAYOUT_CHANGES'), input('LAYOUT_SENT', { layoutUrl: 'https://exemplo.invalid/v2' }))));
+test('layout aprovado não ganha a venda', () => assert.ok(!nextStages('LAYOUT_APPROVED').includes('WON')));
+test('alterar versão aprovada exige nova revisão', () => assert.throws(() => checkFlow(current('LAYOUT_APPROVED', { layoutApprovedAt: new Date(), layoutUrl: 'https://exemplo.invalid/v1', layoutVersion: '1' }), input('FORMALIZATION', { layoutUrl: 'https://exemplo.invalid/v2', layoutVersion: '2' }))));
+test('alterar layout pela etapa de ajustes é permitido', () => assert.doesNotThrow(() => checkFlow(current('LAYOUT_APPROVED', { layoutApprovedAt: new Date(), layoutUrl: 'https://exemplo.invalid/v1' }), input('LAYOUT_CHANGES', { layoutUrl: 'https://exemplo.invalid/v2' }))));
+test('formalização exige empresa antes do pagamento', () => assert.throws(() => checkFlow(current('FORMALIZATION'), input('AWAITING_PAYMENT'))));
+test('formalização exige escopo', () => assert.throws(() => checkFlow(current('FORMALIZATION'), input('AWAITING_PAYMENT', { ...deal, scope: null }))));
+test('formalização exige condições de pagamento', () => assert.throws(() => checkFlow(current('FORMALIZATION'), input('AWAITING_PAYMENT', { ...deal, paymentTerms: null }))));
+test('condição inicial precisa ser positiva', () => assert.throws(() => checkFlow(current('FORMALIZATION'), input('AWAITING_PAYMENT', { ...deal, initialPaymentCents: 0 }))));
+test('entrada não pode superar o total', () => assert.throws(() => checkFlow(current('FORMALIZATION'), input('AWAITING_PAYMENT', { ...deal, initialPaymentCents: 90000 }))));
+test('entrada positiva permite aguardar pagamento', () => assert.doesNotThrow(() => checkFlow(current('FORMALIZATION'), input('AWAITING_PAYMENT', { ...deal, paidCents: 0, contractConfirmed: false }))));
+test('sem contratação não ganha a venda', () => assert.throws(() => checkFlow(current('AWAITING_PAYMENT'), input('WON', { ...deal, contractConfirmed: false }))));
+test('sem entrada recebida não ganha a venda', () => assert.throws(() => checkFlow(current('AWAITING_PAYMENT'), input('WON', { ...deal, paidCents: 19999 }))));
+test('entrada acordada pode liberar projeto sem pagamento integral', () => assert.doesNotThrow(() => checkFlow(current('AWAITING_PAYMENT'), input('WON', deal))));
+test('recebimento acima do preço é recusado', () => assert.throws(() => checkFlow(current('AWAITING_PAYMENT'), input('WON', { ...deal, paidCents: 90000 }))));
+test('negociação perdida exige motivo', () => assert.throws(() => checkFlow(current('BRIEFING'), input('LOST'))));
+test('perda com motivo é registrada', () => assert.doesNotThrow(() => checkFlow(current('BRIEFING'), input('LOST', { lostReason: 'Cliente adiou a contratação' }))));
+for (const stage of ['WON', 'LOST'])
+    test('negociação encerrada não é reaberta silenciosamente: ' + stage, () => assert.throws(() => checkFlow(current(stage), input('BRIEFING'))));
+test('estado comercial desconhecido é recusado', () => assert.throws(() => checkFlow(current('INTERESTED'), input('PUBLICADO'))));
+test('todos os destinos comerciais existem', () => { for (const k of Object.keys(STAGES))
+    for (const d of nextStages(k))
+        assert.ok(STAGES[d]); });
+test('todos os destinos de projeto existem', () => { for (const k of Object.keys(PROJECT_STAGES))
+    for (const d of nextProjectStages(k))
+        assert.ok(PROJECT_STAGES[d]); });
+test('revisão do site é distinta da aprovação comercial', () => assert.deepEqual(nextProjectStages('CLIENT_REVIEW'), ['CLIENT_REVIEW', 'ADJUSTMENTS', 'READY_TO_PUBLISH']));
+test('publicação só é oferecida após aprovação do site', () => { assert.ok(!nextProjectStages('IN_PRODUCTION').includes('PUBLISHED')); assert.ok(nextProjectStages('READY_TO_PUBLISH').includes('PUBLISHED')); });
+test('sem interesse é aceito como análise comercial', () => assert.equal(validateEdit(JSON.stringify({ values, assessment: 'NO_INTEREST', version: '2026-11-09T17:00:00Z' })).assessment, 'NO_INTEREST'));
+test('restauração preserva classificação antiga sem convertê-la em recusa', () => assert.equal(restoreAssessment(markDeleted('HAS_WEBSITE')), 'HAS_WEBSITE'));
+test('seleção reaberta respeita bloqueio de linha importada', () => assert.equal(restoreSelection([{ id: '1', locked: true, errors: [], conflicts: [], data: values }], { '1': { selected: true, allowDuplicate: true, reason: '', values } })['1'].selected, false));
+test('empresa não exibe avaliação ou restrição e mantém dados antigos ocultos', () => { const s = read('src/app/(crm)/empresas/company-form.tsx'); assert.ok(!s.includes('title="Avaliação Comercial"')); assert.ok(!s.includes('title="Restrição de Contato"')); assert.ok(!s.includes('<dt>Avaliação</dt>')); for (const key of ['assessment', 'doNotContact', 'doNotContactReason'])
+    assert.ok(s.includes('type="hidden" name="' + key + '"')); assert.ok(s.includes('number={5} title="Observações Internas"')); });
+test('CEP, versão e validação documental são preservados', () => { const s = read('src/app/(crm)/empresas/company-form.tsx'); for (const part of ['AbortController', 'digits(live.current.postalCode)!==cep', 'validCpf', 'validCnpj', 'slice(0,5)', 'useActionState', 'acknowledgeDuplicates', 'name="updatedAt"'])
+    assert.ok(s.includes(part)); });
+test('nota e avaliação são colunas diferentes; aviso genérico saiu', () => { const s = read('src/components/visual-crm/leads-table.tsx'); assert.match(s, /["']Google["']\s*,\s*["']Análise comercial["']/); assert.ok(!s.includes('Pesquisar dados')); assert.ok(!s.includes('Não avaliado')); assert.ok(!s.includes('value="HAS_WEBSITE"')); assert.ok(!s.includes('value="DUPLICATE"')); assert.ok(s.includes('value="NO_INTEREST"')); });
+test('servidor usa autenticação, transação, trava e versão', () => { const s = read('src/server/sales/actions.ts'); for (const part of ['await requireUser()', '$transaction', 'pg_advisory_xact_lock', 'current.version!==version', 'isDeleted', 'doNotContact', 'version:{increment:1}'])
+    assert.ok(s.includes(part)); });
+test('fechamento cria projeto único e copia condições', () => { const s = read('src/server/sales/actions.ts'); for (const part of ["stage==='WON'&&company&&opportunityId&&!projectId", "stage:'AWAITING_CONTENT'", 'planNameSnapshot:input.planName', 'creationPriceCents:input.creationPriceCents', 'events:{create:'])
+    assert.ok(s.includes(part)); });
+test('migração é aditiva, sem apagar ou reclassificar leads', () => { const s = read('prisma/migrations/202611090002_sales_flow/migration.sql'); assert.ok(!/\b(DROP|DELETE|TRUNCATE)\s+(TABLE|FROM)/i.test(s)); assert.ok(!/UPDATE\s+"?leads/i.test(s)); assert.ok(s.includes('CREATE TABLE "sales_flows"')); assert.ok(s.includes('CREATE TABLE "sales_flow_events"')); assert.ok(s.includes('ON DELETE RESTRICT')); assert.ok(!/GRANT[^;]*\bDELETE\b/i.test(s)); });
+test('schema preserva relacionamentos e contém novos controles', () => { const s = read('prisma/schema.prisma'); for (const part of ['model CsvEntry', 'model Lead', 'model SalesFlow', 'model SalesFlowEvent', 'taskId String? @unique', 'opportunityId String? @unique', 'projectId String? @unique', 'READY_TO_PUBLISH'])
+    assert.ok(s.includes(part)); });
+test('editor registra contratação sem checkbox genérico', () => { const s = read('src/components/visual-crm/sales-board.tsx'); assert.ok(!s.includes('type="checkbox"')); assert.ok(s.includes('Contratação confirmada')); assert.ok(s.includes('Nova negociação com este lead')); });
+test('projeto exige endereço na publicação e registra atividade', () => { const s = read('src/server/sales/actions.ts'); assert.ok(s.includes("stage==='PUBLISHED'&&!website")); assert.ok(s.includes('tx.activity.create')); });

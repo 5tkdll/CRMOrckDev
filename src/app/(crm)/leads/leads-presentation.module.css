@@ -1,0 +1,114 @@
+.page {
+    --leads-text: #0b1c30;
+    --leads-muted: #565e74;
+    --leads-header-text: #777587;
+    --leads-header-bg: #f8f9ff;
+    --leads-border: #c7c4d84d;
+    --leads-row-border: #c7c4d833;
+    --leads-hover: #eff4ff80;
+    --leads-link: #4f46e5;
+}
+
+:global(html[data-crm-theme="dark"]) .page {
+    --leads-text: #e5e7eb;
+    --leads-muted: #b8c5d8;
+    --leads-header-text: #a8b7cd;
+    --leads-header-bg: #111c2e;
+    --leads-border: #334155;
+    --leads-row-border: #334155;
+    --leads-hover: #1e293b;
+    --leads-link: #c4b5fd;
+}
+
+.page .metricLink {
+    color: inherit;
+    text-decoration: none;
+}
+
+.page .metricLink:focus-visible {
+    outline: 3px solid #818cf8;
+    outline-offset: 3px;
+}
+
+.page .tableWrap table {
+    border-collapse: collapse;
+    width: 100%;
+    text-align: left;
+    table-layout: fixed;
+}
+
+.page .tableWrap table th {
+    padding: 12px 16px;
+    background: var(--leads-header-bg);
+    color: var(--leads-header-text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 10px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--leads-border);
+    white-space: nowrap;
+}
+
+.page .tableWrap table td {
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--leads-row-border);
+    font-size: 12px;
+    vertical-align: middle;
+    overflow-wrap: anywhere;
+}
+
+.page .tableWrap table tbody tr:hover {
+    background: var(--leads-hover);
+}
+
+.page .tableWrap .rowName {
+    min-width: 0;
+}
+
+.page .tableWrap .location {
+    min-width: 0;
+    align-items: flex-start;
+}
+
+.page .nameButton {
+    display: block;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--leads-text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.page .nameButton:hover {
+    color: var(--leads-link);
+}
+
+.page .nameButton:focus-visible {
+    outline: 2px solid #818cf8;
+    outline-offset: 3px;
+}
+
+.page .tableActions {
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.page .tableActions button {
+    cursor: pointer;
+}
+
+.page .tableActions button:disabled,
+.page .nameButton:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.page .feedback {
+    margin: 12px 16px;
+}
