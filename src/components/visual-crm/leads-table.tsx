@@ -97,15 +97,15 @@ export function LeadsTable({ rows }: { rows: LeadItem[] }) {
                         Leads encontrados pelos filtros atuais
                     </caption>
                     <colgroup>
-                        <col style={{ width: "20%" }} />
-                        <col style={{ width: "20%" }} />
-                        <col style={{ width: 140 }} />
-                        <col style={{ width: 120 }} />
-                        <col style={{ width: 65 }} />
-                        <col style={{ width: 140 }} />
-                        <col style={{ width: 150 }} />
-                        <col style={{ width: 95 }} />
-                        <col style={{ width: 140 }} />
+                        <col style={{ width: "calc(45% - 414.9px)" }} />
+                        <col style={{ width: "calc(55% - 507.1px)" }} />
+                        <col style={{ width: 136 }} />
+                        <col style={{ width: 116 }} />
+                        <col style={{ width: 64 }} />
+                        <col style={{ width: 154 }} />
+                        <col style={{ width: 160 }} />
+                        <col style={{ width: 100 }} />
+                        <col style={{ width: 192 }} />
                     </colgroup>
                     <thead>
                         <tr>

@@ -38,7 +38,7 @@
 }
 
 .page .tableWrap table th {
-    padding: 12px 16px;
+    padding: 12px 10px;
     background: var(--leads-header-bg);
     color: var(--leads-header-text);
     text-transform: uppercase;
@@ -50,7 +50,7 @@
 }
 
 .page .tableWrap table td {
-    padding: 13px 16px;
+    padding: 13px 10px;
     border-bottom: 1px solid var(--leads-row-border);
     font-size: 12px;
     vertical-align: middle;
@@ -96,11 +96,25 @@
 
 .page .tableActions {
     align-items: center;
+    justify-content: flex-end;
     flex-wrap: nowrap;
+    gap: 6px;
 }
 
 .page .tableActions button {
+    flex: 0 0 auto;
+    min-height: 28px;
     cursor: pointer;
+}
+
+.page .tableActions button:not(:first-child) {
+    width: 28px;
+    min-width: 28px;
+    padding: 5px;
+}
+
+.page .tableWrap table td:last-child {
+    overflow: visible;
 }
 
 .page .tableActions button:disabled,
@@ -111,4 +125,87 @@
 
 .page .feedback {
     margin: 12px 16px;
+}
+
+/* O cabeçalho passa a controlar as larguras, sem os estilos inline do colgroup. */
+.page .tableWrap table colgroup {
+    display: none;
+}
+
+.page .tableWrap table th {
+    box-sizing: border-box;
+}
+
+.page .tableWrap table th:nth-child(1) {
+    width: calc(45% - 414.9px);
+}
+
+.page .tableWrap table th:nth-child(2) {
+    width: calc(55% - 547.1px);
+}
+
+.page .tableWrap table th:nth-child(3) {
+    width: 136px;
+}
+
+.page .tableWrap table th:nth-child(4) {
+    width: 156px;
+}
+
+.page .tableWrap table th:nth-child(5) {
+    width: 64px;
+}
+
+.page .tableWrap table th:nth-child(6) {
+    width: 154px;
+}
+
+.page .tableWrap table th:nth-child(7) {
+    width: 160px;
+}
+
+.page .tableWrap table th:nth-child(8) {
+    width: 100px;
+}
+
+.page .tableWrap table th:nth-child(9) {
+    width: 192px;
+}
+
+.page .tableWrap table td:nth-child(2) {
+    overflow: hidden;
+}
+
+.page .tableWrap table td:nth-child(2) > span:first-child {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 11px;
+}
+
+.page .tableWrap .location {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 10px;
+    line-height: 16px;
+}
+
+.page .tableWrap .location svg {
+    margin-right: 3px;
+    vertical-align: -2px;
+}
+
+.page .tableWrap table td:nth-child(4) span {
+    width: fit-content;
+    max-width: 100%;
+    white-space: nowrap;
+}
+
+.page .tableWrap table td:nth-child(4) svg {
+    flex-shrink: 0;
 }
