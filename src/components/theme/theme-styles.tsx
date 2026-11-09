@@ -7,6 +7,7 @@ const maps:Record<string,string>[]=[registration,listing,dashboard,companies,add
 const prefix='html[data-crm-theme="dark"] ';
 function selectors(keys:string){return [...new Set(maps.flatMap(map=>keys.split(" ").map(key=>map[key]).filter((v):v is string=>typeof v==="string").flatMap(v=>v.split(/\s+/)).filter(v=>/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(v))))].map(v=>prefix+"."+v);}
 function rule(keys:string,css:string,desc=""){const list=selectors(keys);return list.length?list.map(v=>v+desc).join(",")+"{"+css+"}":"";}
+function dashboardRule(key:string,css:string,desc=""){const value=dashboard[key];if(!value)return "";return value.split(/\s+/).filter(v=>/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(v)).map(v=>prefix+"."+v+desc).join(",")+"{"+css+"}";}
 export function ThemeStyles(){const css=[
  rule("page dashboard form field sectionHeader pageHeader sideCardHeader previewName metricValue metricMid pipelineStage taskContent companyName panelHeader summary","color:#e5e7eb;"),
  rule("section sideCard actionBar archiveAction metric filterCard tableCard panel documentSwitch secondary secondaryButton archiveButton noNumber button openButton iconButton tableAction","background:#162034;border-color:#334155;color:#e5e7eb;box-shadow:none;"),
@@ -26,4 +27,30 @@ export function ThemeStyles(){const css=[
  rule("danger red fieldError asterisk","color:#fca5a5;"),rule("dangerMetric","color:#fca5a5;"," strong"),rule("dangerMetric","color:#fca5a5;"," ."+dashboard.metricTop),rule("restrictionActive","background:#381e2c;border-color:#85414c;color:#fda4af;"),rule("restrictionActive","color:#fda4af;"," strong"),rule("validIcon","color:#86efac;"),
  rule("field","background:#301e29;border-color:#fb7185;"," input[aria-invalid=true]"),rule("field","background:#301e29;border-color:#fb7185;"," textarea[aria-invalid=true]"),rule("field","background:#301e29;border-color:#fb7185;"," select[aria-invalid=true]"),
  rule("primary primaryButton saveButton","background:#4f46e5;border-color:#6366f1;color:#ffffff;"),rule("primary primaryButton saveButton","background:#4338ca;color:#ffffff;",":hover"),rule("documentSwitch","color:#cbd5e1;"," button"),rule("documentSwitch","background:#4f46e5;color:#ffffff;"," button[aria-pressed=true]"),
+ dashboardRule("panelHeader","color:#e5e7eb;"," h2"),
+ dashboardRule("panelHeader","color:#a5b4fc;"," h2 svg"),
+ dashboardRule("panelHeader","color:#c4b5fd;",">a"),
+ dashboardRule("panelFooter","color:#c4b5fd;"," a"),
+ dashboardRule("timeline","color:#c4b5fd;"," li a"),
+ dashboardRule("panelHeader","color:#ddd6fe;text-decoration:underline;text-underline-offset:3px;",">a:hover"),
+ dashboardRule("panelFooter","color:#ddd6fe;text-decoration:underline;text-underline-offset:3px;"," a:hover"),
+ dashboardRule("timeline","color:#ddd6fe;text-decoration:underline;text-underline-offset:3px;"," li a:hover"),
+ dashboardRule("alertPanel","background:#30202d;border-color:#85414c;",">."+dashboard.panelHeader),
+ dashboardRule("alertPanel","color:#fca5a5;",">."+dashboard.panelHeader+" h2"),
+ dashboardRule("alertPanel","color:#fca5a5;",">."+dashboard.panelHeader+" h2 svg"),
+ dashboardRule("heading","color:#b8c5d8;"," p"),
+ dashboardRule("heading","color:#a5b4fc;"," ."+dashboard.eyebrow),
+ dashboardRule("metric","color:#b8c5d8;",">p"),
+ dashboardRule("metricTop","color:#b8c5d8;"),
+ dashboardRule("metricMid","color:#cbd5e1;",">span"),
+ dashboardRule("dangerMetric","color:#fecdd3;"," ."+dashboard.metricMid+">span"),
+ dashboardRule("dangerMetric","background:#4a2636;"," ."+dashboard.metricMid+">span"),
+ dashboardRule("taskIcon","color:#b8c5d8;"),
+ dashboardRule("taskContent","color:#b8c5d8;",">."+dashboard.secondaryText),
+ dashboardRule("service","color:#b8c5d8;"," small"),
+ dashboardRule("timeline","color:#b8c5d8;"," li p"),
+ dashboardRule("timelineTop","color:#b8c5d8;"," time"),
+ dashboardRule("pipelineValue","color:#b8c5d8;"," small"),
+ dashboardRule("pipelineStage","color:#b8c5d8;"," small"),
+ dashboardRule("tableAction","color:#c4b5fd!important;"),
  ].join("\n");return <style id="crm-component-dark-colors" dangerouslySetInnerHTML={{__html:css}}/>;}
