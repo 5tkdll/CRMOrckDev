@@ -3,7 +3,7 @@ import {requireUser} from '@/server/auth/session';
 import {importHistory} from '@/server/imports/actions';
 export const dynamic='force-dynamic';
 export default async function Page(){
- await requireUser();
- try{return <ImportsVisual history={await importHistory()}/>;}
- catch{return <ImportsVisual history={[]} setupError="Não foi possível consultar as importações. Confira conexão, permissões e os arquivos do Pacote 14."/>;}
+ const user=await requireUser();
+ try{return <ImportsVisual userId={user.id} history={await importHistory()}/>;}
+ catch{return <ImportsVisual userId={user.id} history={[]} setupError="Não foi possível consultar o histórico. Confira conexão e permissões do banco."/>;}
 }
