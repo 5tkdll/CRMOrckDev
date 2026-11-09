@@ -1,0 +1,27 @@
+.page .metrics {
+    grid-template-columns: minmax(0, 400px);
+}
+
+.page .table {
+    min-width: 1040px;
+    table-layout: fixed;
+}
+
+.page .table th,
+.page .table td {
+    padding: 12px;
+}
+
+.page .table td {
+    max-width: none;
+}
+
+.page .companyName {
+    min-width: 0;
+}
+
+.page .location {
+    min-width: 0;
+    align-items: flex-start;
+    overflow-wrap: anywhere;
+}
